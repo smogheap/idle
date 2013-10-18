@@ -62,6 +62,9 @@ IdleEngine.prototype.render = function render()
 		((this.canvas.height / this.tileSize[1]) + 1 ) * 2
 	];
 
+	this.ctx.save();
+	this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
 	for (y = 0; y <= size[1]; y++) {
 		for (x = 0; x <= size[0]; x++) {
 			var tile;
@@ -93,6 +96,14 @@ IdleEngine.prototype.render = function render()
 			this.ctx.drawImage(tile, l, t);
 		}
 	}
+
+	var time = Math.random();
+
+	/* Adjust the color for the time of day */
+	this.ctx.fillStyle = "rgba(0, 0, 0, " + (time * 0.8) + ")";
+	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+	this.ctx.restore();
 };
 
 IdleEngine.prototype.resize = function render()
