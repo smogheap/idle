@@ -22,6 +22,8 @@ function IdleEngine(canvas)
 	this.tiles				= {};
 
 	this.tileSize			= [ 32, 16 ];
+
+	this.canvas.engine		= this;
 }
 
 IdleEngine.prototype.getTile = function getTile(name)
@@ -56,8 +58,8 @@ IdleEngine.prototype.render = function render()
 	var l	= 0;	/* Left	*/
 	var t	= 0;	/* Top	*/
 	var size = [
-		(this.canvas.width  / this.tileSize[0]),
-		(this.canvas.height / this.tileSize[1]) * 2 + 1
+		(this.canvas.width  / this.tileSize[0]) + 1,
+		((this.canvas.height / this.tileSize[1]) + 1 ) * 2
 	];
 
 	for (y = 0; y <= size[1]; y++) {
@@ -93,6 +95,14 @@ IdleEngine.prototype.render = function render()
 	}
 };
 
+IdleEngine.prototype.resize = function render()
+{
+	this.canvas.width	= window.innerWidth;
+	this.canvas.height	= window.innerHeight;
+
+	this.render();
+};
+
 window.addEventListener('load', function() {
 	var c		= document.getElementById('game');
 	var engine	= new IdleEngine(c);
@@ -104,6 +114,15 @@ window.addEventListener('load', function() {
 		"hole",
 		"puddle"
 	], function() {
-		engine.render();
+		engine.resize();
 	});
 }, false);
+
+
+window.addEventListener('resize', function() {
+	var c		= document.getElementById('game');
+
+	c.engine.resize();
+}, false);
+
+
