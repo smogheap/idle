@@ -29,6 +29,56 @@ function IdleEngine(canvas)
 	this.time				= this.seed;
 }
 
+// TODO	This should probably be loaded from a seperate JSON document, but I
+//		don't feel like writing that code yet.
+//
+//		For now the map is just an array of strings, with the tile index. This
+//		will obviously need to be extended...
+IdleEngine.prototype.world = {
+	"tiles": [
+		"grass",		// 0
+		"fence-ne",		// 1
+		"fence-nw",		// 2
+		"hole",			// 3
+		"puddle"		// 4
+	],
+
+	"elevations": [
+		"elevation"
+	],
+
+	"map": [
+		"0 0 0 0 0 0 0 0 0 0 0 2 1 0 0 ",
+		" 0 0 0 0 0 0 0 0 0 0 2 0 1 0 0",
+		"0 4 0 0 0 0 0 0 0 0 1 0 0 1 0 ",
+		" 0 0 0 0 0 0 0 0 0 0 1 0 3 1 0",
+		"0 0 0 0 0 0 0 0 0 3 0 1 0 0 2 ",
+		" 0 0 0 0 0 0 0 0 0 0 0 1 0 2 0",
+		"0 0 0 0 0 0 0 0 0 0 0 0 1 2 0 ",
+		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+		"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ",
+		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+		"0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 ",
+		" 0 0 0 2 1 0 0 0 0 0 0 0 0 0 0",
+		"0 0 0 2 0 1 0 0 0 0 0 0 0 0 0 ",
+		" 0 4 2 0 0 1 0 0 0 0 0 0 0 0 0",
+		"0 0 2 0 0 0 1 0 0 0 0 0 0 0 0 ",
+		" 0 1 0 0 0 0 2 0 0 0 0 0 0 0 0",
+		"0 0 1 0 0 0 2 0 0 0 0 0 0 0 0 ",
+		" 0 0 1 0 0 2 0 0 0 0 0 0 0 0 0",
+		"0 0 0 1 0 2 0 0 0 0 0 0 0 0 0 ",
+		" 0 0 0 1 2 0 0 0 4 0 0 0 0 0 0",
+		"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ",
+		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+		"0 0 0 0 0 0 3 0 0 0 0 0 0 0 0 ",
+		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+		"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ",
+		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+		"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ",
+		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+	]
+};
+
 IdleEngine.prototype.getTile = function getTile(name)
 {
 	if (!this.tiles[name]) {
@@ -54,35 +104,21 @@ IdleEngine.prototype.loadTiles = function loadTiles(names, cb)
 	}
 };
 
-IdleEngine.prototype.render = function render()
+IdleEngine.prototype.render= function render()
 {
-	var x		= 0;
-	var y		= 0;
 	var l		= 0;	/* Left	*/
 	var t		= 0;	/* Top	*/
 	var eltile	= this.getTile('elevation');
-	var size = [
-		(this.canvas.width  / this.tileSize[0]) + 1,
-		((this.canvas.height / this.tileSize[1]) + 1 ) * 2
-	];
 
 	this.ctx.save();
 	this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-	for (y = 0; y <= size[1]; y++) {
-		WRand.setSeed(this.seed + (y * y));
+	for (var y = 0, row; row = this.world.map[y]; y++) {
+		/* Strip whitespace */
+		row = row.replace(/\s/g, '');
 
-		for (x = 0; x <= size[0]; x++) {
-			var tile;
-
-			switch (WRand() % 15) {
-				default:
-				case 0:	tile = this.getTile('grass');		break;
-				case 1:	tile = this.getTile('fence-ne');	break;
-				case 2:	tile = this.getTile('fence-nw');	break;
-				case 3:	tile = this.getTile('hole');		break;
-				case 4:	tile = this.getTile('puddle');		break;
-			}
+		for (var x = 0, index; (index = row.charAt(x)) && index.length == 1; x++) {
+			var tile = this.getTile(this.world.tiles[index]);
 
 			/* Figure out the position for the tile */
 			t = (y * (this.tileSize[1] / 2));
@@ -93,47 +129,15 @@ IdleEngine.prototype.render = function render()
 				l += x * 2;
 			}
 
-			if (y % 2 == 0) {
+			if (y % 2 != 0) {
 				l += this.tileSize[0] / 2;
 			}
 
 			/*
 				Adjust the height of the tile based on it's elevation.
 			*/
-			// var elevation = Math.random() * 100;
+			// TODO	Read elevation from the map...
 			var elevation = 0;
-
-/*
-			if (y < 21 && x < 20) {
-				elevation++;
-
-				if (y < 11 && x < 10) {
-					elevation++;
-
-					if (y < 5 && x < 5) {
-						elevation++;
-					}
-				}
-			}
-*/
-			if (x < 10) {
-				if (x * 2 >= y) {
-					elevation += 1.8;
-				}
-
-				if (x * 2 >= (y - 6)) {
-					elevation++;
-				}
-			} else {
-				if ((20 - x) * 2 >= (y + 1)) {
-					elevation += 1.8;
-				}
-
-				if ((20 - x) * 2 >= (y - 5)) {
-					elevation++;
-				}
-			}
-
 
 			if (elevation < 3 && elevation > 0) {
 				t -= elevation * this.tileSize[1];
@@ -162,8 +166,6 @@ IdleEngine.prototype.render = function render()
 			this.ctx.drawImage(tile, l, t);
 		}
 	}
-
-	WRand.setSeed(this.seed);
 
 	var time = ((++this.time) % 1000) / 1000;
 
@@ -228,7 +230,11 @@ IdleEngine.prototype.timeToColor = function timeToColor(time)
 
 IdleEngine.prototype.start = function start()
 {
-	setInterval(this.render.bind(this), 1000/30);
+	this.loadTiles(this.world.tiles, function() {
+		this.resize();
+		setInterval(this.render.bind(this), 1000/30);
+		// setInterval(this.render.bind(this), 1000/3);
+	}.bind(this));
 };
 
 IdleEngine.prototype.resize = function resize()
@@ -241,17 +247,7 @@ window.addEventListener('load', function() {
 	var c		= document.getElementById('game');
 	var engine	= new IdleEngine(c);
 
-	engine.loadTiles([
-		"fence-ne",
-		"fence-nw",
-		"grass",
-		"hole",
-		"puddle",
-		"elevation"
-	], function() {
-		engine.resize();
-		engine.start();
-	});
+	engine.start();
 }, false);
 
 window.addEventListener('resize', function() {
