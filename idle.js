@@ -39,7 +39,7 @@ IdleEngine.prototype.getTile = function getTile(name)
 	return(this.tiles[name]);
 };
 
-IdleEngine.prototype.loadTiles = function getTile(names, cb)
+IdleEngine.prototype.loadTiles = function loadTiles(names, cb)
 {
 	var loaded	= 0;
 
@@ -165,24 +165,73 @@ IdleEngine.prototype.render = function render()
 
 	WRand.setSeed(this.seed);
 
-	/* Cycle a time value back and forth between 0.0 and 1.0 */
-	var time = Math.abs(((++this.time) % 1000) - 500) / 500;
+	var time = ((++this.time) % 1000) / 1000;
 
-	/* Adjust the color for the time of day */
-	// TODO	This should be smarter, orange tones at dawn, purples and blues at
-	//		night, etc.
-	this.ctx.fillStyle = "rgba(0, 0, 0, " + (time * 0.8) + ")";
+	this.ctx.fillStyle = this.timeToColor(time);
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
 	this.ctx.restore();
 };
 
-IdleEngine.prototype.start = function render()
+IdleEngine.prototype.timeColors = [
+	[   0,   0,  20, 0.8 ],	/* Just after midnight	*/
+	[  20,   0,  10, 0.5 ],
+	[  80,   0,   0, 0.3 ],	/* Morning				*/
+	[ 255, 255, 255, 0.0 ],
+	[ 255, 230, 230, 0.2 ], /* Noon					*/
+	[ 255, 255, 255, 0.0 ],
+	[ 180,  50,  80, 0.3 ],	/* Sunset				*/
+	[  40,   0,  20, 0.5 ],
+	[   0,   0,  30, 0.8 ]	/* Just before midnight	*/
+];
+
+/*
+	Give a time of day between 0 (midnight) and 1 (midnight again) return a
+	color that is appropriate.
+*/
+IdleEngine.prototype.timeToColor = function timeToColor(time)
+{
+	var t = (time * this.timeColors.length) % this.timeColors.length;
+	var w = t;
+
+	t = Math.floor(t);
+	w -= t;
+
+	/* Find the last exact value */
+	var ra	= this.timeColors[t][0];
+	var ga	= this.timeColors[t][1];
+	var ba	= this.timeColors[t][2];
+	var aa	= this.timeColors[t][3];
+
+	/* And the next one */
+	t++;
+	t = t % this.timeColors.length;
+	var rb	= this.timeColors[t][0];
+	var gb	= this.timeColors[t][1];
+	var bb	= this.timeColors[t][2];
+	var ab	= this.timeColors[t][3];
+
+	/* Calculate the difference scaled by the partial number */
+	var rd = (rb - ra) * w;
+	var gd = (gb - ga) * w;
+	var bd = (bb - ba) * w;
+	var ad = (ab - aa) * w;
+
+	/* And the final values */
+	var r = Math.floor(ra + rd);
+	var g = Math.floor(ga + gd);
+	var b = Math.floor(ba + bd);
+	var a = aa + ad;
+
+	return("rgba(" + r + "," + g + "," + b + "," + a + ")");
+};
+
+IdleEngine.prototype.start = function start()
 {
 	setInterval(this.render.bind(this), 1000/30);
 };
 
-IdleEngine.prototype.resize = function render()
+IdleEngine.prototype.resize = function resize()
 {
 	this.canvas.width	= window.innerWidth;
 	this.canvas.height	= window.innerHeight;
