@@ -26,7 +26,7 @@ function IdleEngine(canvas)
 	this.canvas.engine		= this;
 
 	this.seed				= WRand.getSeed(NaN);
-	console.log('Game seed: ' + this.seed);
+	this.time				= this.seed;
 }
 
 IdleEngine.prototype.getTile = function getTile(name)
@@ -165,15 +165,21 @@ IdleEngine.prototype.render = function render()
 
 	WRand.setSeed(this.seed);
 
-	var time = (WRand() % 100) / 100;
+	var time = Math.abs(((++this.time) % 100) - 50) / 100;
+console.log(time);
 
 	/* Adjust the color for the time of day */
 	// TODO	This should be smarter, orange tones at dawn, purples and blues at
 	//		night, etc.
-	this.ctx.fillStyle = "rgba(0, 0, 0, " + (time * 0.8) + ")";
+	this.ctx.fillStyle = "rgba(0, 0, 0, " + (time * 1.7) + ")";
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
 	this.ctx.restore();
+};
+
+IdleEngine.prototype.start = function render()
+{
+	setInterval(this.render.bind(this), 1000/30);
 };
 
 IdleEngine.prototype.resize = function render()
@@ -195,16 +201,14 @@ window.addEventListener('load', function() {
 		"elevation"
 	], function() {
 		engine.resize();
-		engine.render();
+		engine.start();
 	});
 }, false);
 
-
 window.addEventListener('resize', function() {
-	var c		= document.getElementById('game');
+	var c = document.getElementById('game');
 
 	c.engine.resize();
-	c.engine.render();
 }, false);
 
 
