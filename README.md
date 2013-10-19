@@ -59,10 +59,6 @@ Opening Scene
 
 	<The player is now in control of Idle>
 
-	<Time continues to move quickly, with a whole day taking about 30 seconds
-	during normal game play, as a way to show that Idle moves very slowly
-	compared to everyone else>
-
 
 
 Game Description

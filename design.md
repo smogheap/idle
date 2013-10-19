@@ -4,6 +4,73 @@ Idle
 Game Description
 --------------------------------------------------------------------------------
 
+The first episode is based around Idle's attempts to get his door unlocked.
+Subsequent episodes will have similar themes.
+
+Idle is constantly faced with problems that would be trivial to overcome for any
+reasonably intelligent adult. In fact, the NPCs around him will be seen going
+about their lifes having no trouble with these issues at all.
+
+It is important that the challenges that Idle faces feel real. The root cause of
+all of Idle's problems is how lazy he is, and has been for his whole life.
+
+
+Obstacles
+--------------------------------------------------------------------------------
+
+For example, at the start of the game it is raining. Idle needs an umbrella.
+An NPC caught in the rain would simply go to the shop down the street and
+purchase one. Idle doesn't have any money, or credit though. He has to find a
+way to pay for the umbrella.
+
+Of course, once Idle obtains an umbrella and opens it for the first time, the
+rain suddenly stops.
+
+Idle's challenges continue in a similar way. He is unable to get a taxi because
+each time he hails one an NPC gets in first. He can't pay a toll for a road
+because he doesn't have a credit card. He can't get a job because he is so
+poorly dressed, etc etc etc.
+
+
+Game Play
+--------------------------------------------------------------------------------
+
+The game will be rendered in an isometric view, and the player will be able to
+move Idle in 8 directions using either a d-pad or a touch screen.
+
+From the player's point of view Idle will move relatively quicklly. From an NPCs
+view however Idle will be moving at a snail's pace.
+
+In the game time will pass very quickly, in order to illustrate the very slow
+pace that Idle moves at. An entire day will pass in the game in about 60
+seconds.
+
+There will be no monsters in the game. All obstacles will simply be logic
+puzzles. The player will not be required to have any skill to play the game.
+Even a puzzle that depends on the time of day must be easy to acomplish with any
+input mechanism.
+
+Idle will have a life meter, and can take damage from things like falling,
+drowning, spikes, etc. His life meter will slowly refill as he munches on
+cookies that he has in his pocket.
+
+
+First Episode Story
+--------------------------------------------------------------------------------
+
+The first episode starts with Idle being locked out of his house, and focuses on
+his attempts to get his door unlocked. He leaves his house in order to get food
+(delivery).
+
+Upon completing his quest he sits down to enjoy his show, and the power goes out
+since he has neglected to pay his bill, leaving an opening for the next episode.
+
+
+
+
+
+
+
 The entire game is based around Idle's attempt to get his door unlocked. The
 graphics and basic game play should be in the style of early Zelda games such as
 "A link to the past".
