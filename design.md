@@ -66,20 +66,6 @@ Upon completing his quest he sits down to enjoy his show, and the power goes out
 since he has neglected to pay his bill, leaving an opening for the next episode.
 
 
-
-
-
-
-
-The entire game is based around Idle's attempt to get his door unlocked. The
-graphics and basic game play should be in the style of early Zelda games such as
-"A link to the past".
-
-Unlike Zelda though this game will contain no monsters at all. The only thing
-that can hurt Idle's life meter are natural dangerous such as drowning, falling
-in a pit, spikes, etc. He will not lose life because of hunger since he goes
-through the entire game holding the food he got from the mailbox.
-
 Idle's Appearance
 --------------------------------------------------------------------------------
 
