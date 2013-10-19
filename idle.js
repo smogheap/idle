@@ -165,13 +165,13 @@ IdleEngine.prototype.render = function render()
 
 	WRand.setSeed(this.seed);
 
-	var time = Math.abs(((++this.time) % 100) - 50) / 100;
-console.log(time);
+	/* Cycle a time value back and forth between 0.0 and 1.0 */
+	var time = Math.abs(((++this.time) % 1000) - 500) / 500;
 
 	/* Adjust the color for the time of day */
 	// TODO	This should be smarter, orange tones at dawn, purples and blues at
 	//		night, etc.
-	this.ctx.fillStyle = "rgba(0, 0, 0, " + (time * 1.7) + ")";
+	this.ctx.fillStyle = "rgba(0, 0, 0, " + (time * 0.8) + ")";
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
 	this.ctx.restore();
