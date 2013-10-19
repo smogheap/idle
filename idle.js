@@ -53,10 +53,11 @@ IdleEngine.prototype.loadTiles = function getTile(names, cb)
 
 IdleEngine.prototype.render = function render()
 {
-	var x	= 0;
-	var y	= 0;
-	var l	= 0;	/* Left	*/
-	var t	= 0;	/* Top	*/
+	var x		= 0;
+	var y		= 0;
+	var l		= 0;	/* Left	*/
+	var t		= 0;	/* Top	*/
+	var eltile	= this.getTile('elevation');
 	var size = [
 		(this.canvas.width  / this.tileSize[0]) + 1,
 		((this.canvas.height / this.tileSize[1]) + 1 ) * 2
@@ -82,8 +83,68 @@ IdleEngine.prototype.render = function render()
 			t = (y * (this.tileSize[1] / 2));
 			l = (x * (this.tileSize[0]));
 
+			if (false) { // debug
+				t += y * 2;
+				l += x * 2;
+			}
+
 			if (y % 2 == 0) {
 				l += this.tileSize[0] / 2;
+			}
+
+			/*
+				Adjust the height of the tile based on it's elevation.
+			*/
+			// var elevation = Math.random() * 100;
+			var elevation = 0;
+
+/*
+			if (y < 21 && x < 20) {
+				elevation++;
+
+				if (y < 11 && x < 10) {
+					elevation++;
+
+					if (y < 5 && x < 5) {
+						elevation++;
+					}
+				}
+			}
+*/
+			if (x < 10) {
+				if (x * 2 >= y) {
+					elevation++;
+				}
+
+				if (x * 2 >= (y - 6)) {
+					elevation++;
+				}
+			} else {
+				if ((20 - x) * 2 >= (y + 1)) {
+					elevation++;
+				}
+
+				if ((20 - x) * 2 >= (y - 5)) {
+					elevation++;
+				}
+			}
+
+
+			if (elevation < 3 && elevation > 0) {
+				t -= elevation * this.tileSize[1];
+
+				var el = l;
+				var et = t;
+
+				/*
+					Adjust so we're drawing from the point that the bottom
+					center of the real tile should be.
+				*/
+				el -= eltile.width / 2;
+				et -= this.tileSize[1] / 2;
+
+				/* Draw the elevation image */
+				this.ctx.drawImage(eltile, el, et);
 			}
 
 			/*
@@ -100,6 +161,8 @@ IdleEngine.prototype.render = function render()
 	var time = Math.random();
 
 	/* Adjust the color for the time of day */
+	// TODO	This should be smarter, orange tones at dawn, purples and blues at
+	//		night, etc.
 	this.ctx.fillStyle = "rgba(0, 0, 0, " + (time * 0.8) + ")";
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -123,7 +186,8 @@ window.addEventListener('load', function() {
 		"fence-nw",
 		"grass",
 		"hole",
-		"puddle"
+		"puddle",
+		"elevation"
 	], function() {
 		engine.resize();
 	});
