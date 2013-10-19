@@ -113,7 +113,7 @@ IdleEngine.prototype.render = function render()
 */
 			if (x < 10) {
 				if (x * 2 >= y) {
-					elevation++;
+					elevation += 1.8;
 				}
 
 				if (x * 2 >= (y - 6)) {
@@ -121,7 +121,7 @@ IdleEngine.prototype.render = function render()
 				}
 			} else {
 				if ((20 - x) * 2 >= (y + 1)) {
-					elevation++;
+					elevation += 1.8;
 				}
 
 				if ((20 - x) * 2 >= (y - 5)) {
