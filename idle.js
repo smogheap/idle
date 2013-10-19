@@ -24,6 +24,9 @@ function IdleEngine(canvas)
 	this.tileSize			= [ 32, 16 ];
 
 	this.canvas.engine		= this;
+
+	this.seed				= WRand.getSeed(NaN);
+	console.log('Game seed: ' + this.seed);
 }
 
 IdleEngine.prototype.getTile = function getTile(name)
@@ -67,10 +70,12 @@ IdleEngine.prototype.render = function render()
 	this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
 	for (y = 0; y <= size[1]; y++) {
+		WRand.setSeed(this.seed + (y * y));
+
 		for (x = 0; x <= size[0]; x++) {
 			var tile;
 
-			switch (Math.floor((Math.random() * 15))) {
+			switch (WRand() % 15) {
 				default:
 				case 0:	tile = this.getTile('grass');		break;
 				case 1:	tile = this.getTile('fence-ne');	break;
@@ -158,7 +163,9 @@ IdleEngine.prototype.render = function render()
 		}
 	}
 
-	var time = Math.random();
+	WRand.setSeed(this.seed);
+
+	var time = (WRand() % 100) / 100;
 
 	/* Adjust the color for the time of day */
 	// TODO	This should be smarter, orange tones at dawn, purples and blues at
@@ -173,8 +180,6 @@ IdleEngine.prototype.resize = function render()
 {
 	this.canvas.width	= window.innerWidth;
 	this.canvas.height	= window.innerHeight;
-
-	this.render();
 };
 
 window.addEventListener('load', function() {
@@ -190,6 +195,7 @@ window.addEventListener('load', function() {
 		"elevation"
 	], function() {
 		engine.resize();
+		engine.render();
 	});
 }, false);
 
@@ -198,6 +204,7 @@ window.addEventListener('resize', function() {
 	var c		= document.getElementById('game');
 
 	c.engine.resize();
+	c.engine.render();
 }, false);
 
 
