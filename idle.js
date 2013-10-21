@@ -40,9 +40,9 @@ IdleEngine.prototype.tiles = {
 	"%": { name: "rock"														},
 	"'": { name: "rock",		elevation: 0.5, elname: "elevation-rock"	},
 	"#": { name: "rock",		elevation: 1.0, elname: "elevation-rock"	},
-	".": { name: "grass",		elevation: 0.5, elname: "elevation-rock"	},
+	".": { name: "rock",		elevation: 0.5, elname: "elevation-rock"	},
 	"_": { name: "grass",		elevation: 1.0, elname: "elevation-soil"	},
-	"=": { name: "grass",		elevation: 2.0, elname: "elevation-rock"	},
+	"=": { name: "rock",		elevation: 2.0, elname: "elevation-rock"	},
 	":": { name: "grass",		elevation: 1.5, elname: "elevation-soil"	},
 	"o": { name: "puddle"													},
 	"O": { name: "hole"														},
@@ -299,9 +299,10 @@ IdleEngine.prototype.render = function render(map, characters)
 					var l = npc.x - (npc.img.width / 2);
 					var t = npc.y - (npc.img.height);
 
+					/* Offset the character by 4 pixels */
 					this.ctx.drawImage(npc.img,
 						l + this.offset[0],
-						t + this.offset[1] -
+						t + this.offset[1] - 4 -
 								(tile.elevation * this.tileSize[1]));
 				}
 			}
@@ -414,9 +415,92 @@ IdleEngine.prototype.getTimeStr = function getTimeStr(time)
 	return(str);
 };
 
+/*
+	Based on a characters coords (iso, not map) determine if the character is
+	allowed to move from one spot to another.
+*/
+IdleEngine.prototype.canWalk = function canWalk(map, to, from)
+{
+	var		waist	= 4;
+
+	if (this.debug) {
+		return(true);
+	}
+
+	/* Adjust for the offset that the character is rendered at */
+	to[1] -= 4;
+	from[1] -= 4;
+
+	/*
+		Build a list of coordinates to check
+
+		Idle is not just a single pixel... Make sure there is room for him.
+
+		Only check in the direction we are heading though, so we aren't blocked
+		because of something behind him.
+	*/
+	var m = [];
+
+	m.push(this.isoToMap(from[0], from[1]));
+	m.push(this.isoToMap(to[0], to[1]));
+
+	if (to[1] < from[1]) {
+		m.push(this.isoToMap(to[0] - waist, to[1] - waist));
+		m.push(this.isoToMap(to[0] + waist, to[1] - waist));
+	}
+
+	if (to[1] > from[1]) {
+		m.push(this.isoToMap(to[0] - waist, to[1] + waist));
+		m.push(this.isoToMap(to[0] + waist, to[1] + waist));
+	}
+
+	if (to[0] < from[0]) {
+		m.push(this.isoToMap(to[0] - waist, to[1] - waist));
+		m.push(this.isoToMap(to[0] - waist, to[1] + waist));
+	}
+
+	if (to[0] > from[0]) {
+		m.push(this.isoToMap(to[0] + waist, to[1] - waist));
+		m.push(this.isoToMap(to[0] + waist, to[1] + waist));
+	}
+
+
+	var tiles = [];
+	for (var i = 0, tmp; tmp = m[i]; i++) {
+		tiles.push(this.getMapTile(map, tmp[0], tmp[1]));
+	}
+
+	var w = tiles[0];
+	for (var i = 1, t; t = tiles[i]; i++) {
+		if (!t) continue;
+
+		if (t.solid) {
+			return(false);
+		}
+
+		if (w) {
+			if (t.elevation - w.elevation > 0.5) {
+				/* He can't climb that high */
+				return(false);
+			}
+
+			if (w.elevation - t.elevation > 1.0) {
+				/*
+					If we let him fall from that height then we'll have to
+					implement a health meter, and let him die!.
+				*/
+				// TODO	Implement a health meter and let him die
+				return(false);
+			}
+		}
+	}
+
+	return(true);
+};
+
 IdleEngine.prototype.start = function start()
 {
-	var speed			= 3;
+	var speed			= 2;
 	var fps				= 30;
 
 	/* How many real life seconds should it take for a day to pass in game */
@@ -505,36 +589,12 @@ IdleEngine.prototype.start = function start()
 					y += speed / 2;
 				}
 
-				var m	= this.isoToMap(x, y);
-				var t	= this.getMapTile(this.world.map, m[0], m[1]);
-				var w	= this.characters[0].tile;
-
-				while (w && t) {
-					if (!this.debug) {
-						/* Is idle allowed to move there? */
-						if (t.solid) {
-							/* It is something solid, like a fence */
-							break;
-						}
-
-						if (t.elevation - w.elevation > 0.5) {
-							/* He can't climb that high */
-							break;
-						}
-
-						if (w.elevation - t.elevation > 1.0) {
-							/*
-								If we let him fall from that height then we'll have
-								to implement a health meter, and let him die!.
-							*/
-							break;
-						}
-					}
-
+				if (this.canWalk(this.world.map, [ x, y ],
+						[ this.characters[0].x, this.characters[0].y ])
+				) {
 					/* Yup, all good */
 					this.characters[0].x = x;
 					this.characters[0].y = y;
-					break;
 				}
 			}
 
