@@ -37,6 +37,9 @@ function IdleEngine(canvas)
 
 IdleEngine.prototype.tiles = {
 	" ": { name: "grass"													},
+	"%": { name: "rock"														},
+	"'": { name: "rock",		elevation: 0.5, elname: "elevation-rock"	},
+	"#": { name: "rock",		elevation: 1.0, elname: "elevation-rock"	},
 	".": { name: "grass",		elevation: 0.5, elname: "elevation-rock"	},
 	"_": { name: "grass",		elevation: 1.0, elname: "elevation-soil"	},
 	"=": { name: "grass",		elevation: 2.0, elname: "elevation-rock"	},
@@ -55,16 +58,16 @@ IdleEngine.prototype.world = {
 		"  .        |  O  |  ",
 		"           |  oo |  ",
 		"  =        |     |  ",
-		"  =        |     |  ",
+		"  =        |     |# ",
 		"      o     -----   ",
-		"                    ",
-		"                    ",
-		"          o         ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"        o           ",
-		"                    ",
+		"               '''%%",
+		"              ##    ",
+		"          o '''     ",
+		"             %      ",
+		"            %%      ",
+		"           %%       ",
+		"%%      o  %        ",
+		"  %%%%%%% %         ",
 		"-------------|      ",
 		"             |      ",
 		"   OOO       |      ",
@@ -217,6 +220,28 @@ IdleEngine.prototype.render = function render(map, characters)
 		npc.mcoords = this.isoToMap(npc.x, npc.y);
 	}
 
+	/* Set some clipping for the game area */
+	this.ctx.save();
+	this.ctx.beginPath();
+
+	var x = this.offset[0];
+	var y = this.offset[1] - this.tileSize[1] / 2;
+
+	this.ctx.moveTo(x, y - 3 - (this.tileSize[1] * 4));
+	this.ctx.lineTo(x + (10 * this.tileSize[0]) + 3,
+					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 4));
+	this.ctx.lineTo(x + (10 * this.tileSize[0]) + 3,
+					y + (10 * this.tileSize[1]) - 1);
+	this.ctx.lineTo(x,
+					y + (20 * this.tileSize[1]) + 3 - 2);
+	this.ctx.lineTo(x - (10 * this.tileSize[0]) - 3,
+					y + (10 * this.tileSize[1]) - 1);
+	this.ctx.lineTo(x - (10 * this.tileSize[0]) - 3,
+					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 4));
+	this.ctx.lineTo(x, y - 3 - (this.tileSize[1] * 4));
+	this.ctx.clip();
+
+
 	for (var row = 0; row < map.length * 4; row++) {
 		for (var x = 0, y = row; x <= row; y--, x++) {
 			var tile = this.getMapTile(map, x, y);
@@ -289,26 +314,6 @@ IdleEngine.prototype.render = function render(map, characters)
 
 		This mask assumes a 20x20 screen.
 	*/
-	this.ctx.save();
-	this.ctx.beginPath();
-
-	var x = this.offset[0];
-	var y = this.offset[1] - this.tileSize[1] / 2;
-
-	this.ctx.moveTo(x, y - 3 - (this.tileSize[1] * 4));
-	this.ctx.lineTo(x + (10 * this.tileSize[0]) + 3,
-					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 4));
-	this.ctx.lineTo(x + (10 * this.tileSize[0]) + 3,
-					y + (10 * this.tileSize[1]));
-	this.ctx.lineTo(x,
-					y + (20 * this.tileSize[1]) + 3);
-	this.ctx.lineTo(x - (10 * this.tileSize[0]) - 3,
-					y + (10 * this.tileSize[1]));
-	this.ctx.lineTo(x - (10 * this.tileSize[0]) - 3,
-					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 4));
-	this.ctx.lineTo(x, y - 3 - (this.tileSize[1] * 4));
-	this.ctx.clip();
-
 	this.ctx.fillStyle = this.getTimeColor(this.time);
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -423,7 +428,7 @@ IdleEngine.prototype.start = function start()
 		x:			25,
 		y:			150,
 
-		img:		this.getImage('idle-r', 'characters')
+		img:		this.getImage('idle-stand-east', 'characters')
 	}];
 
 	this.keys = {};
@@ -464,13 +469,32 @@ IdleEngine.prototype.start = function start()
 				var y	= this.characters[0].y;
 
 				if (this.keys.left) {
+					if (this.keys.up) {
+						this.characters[0].img = this.getImage('idle-stand-northwest', 'characters');
+					} else if (this.keys.down) {
+						this.characters[0].img = this.getImage('idle-stand-southwest', 'characters');
+					} else {
+						this.characters[0].img = this.getImage('idle-stand-west', 'characters');
+					}
+				} else if (this.keys.right) {
+					if (this.keys.up) {
+						this.characters[0].img = this.getImage('idle-stand-northeast', 'characters');
+					} else if (this.keys.down) {
+						this.characters[0].img = this.getImage('idle-stand-southeast', 'characters');
+					} else {
+						this.characters[0].img = this.getImage('idle-stand-east', 'characters');
+					}
+				} else if (this.keys.up) {
+					this.characters[0].img = this.getImage('idle-stand-north', 'characters');
+				} else if (this.keys.down) {
+					this.characters[0].img = this.getImage('idle-stand-south', 'characters');
+				}
+
+				if (this.keys.left) {
 					x -= speed;
-					this.characters[0].img = this.getImage('idle-l', 'characters');
 				}
 				if (this.keys.right) {
 					x += speed;
-
-					this.characters[0].img = this.getImage('idle-r', 'characters');
 				}
 
 				/* Vertical speed is half horizontal due to the isometric display */
