@@ -317,6 +317,7 @@ IdleEngine.prototype.start = function start()
 			this.ctx.font = '10pt Arial';
 			this.ctx.fillStyle = 'rgb(255, 255, 255)';
 			this.ctx.fillText('Press tab to toggle grid', 10, 50);
+			this.ctx.fillText('arrows or wasd to move', 10, 70);
 
 			/* Move idle based on keyboard input */
 			if (this.keys.left) {
@@ -366,13 +367,22 @@ window.addEventListener('keydown', function(e)
 	var c = document.getElementById('game');
 
 	switch (e.keyCode) {
-		case 37:	c.engine.keys.left	= true;				break;
-		case 38:	c.engine.keys.up	= true;				break;
-		case 39:	c.engine.keys.right	= true;				break;
-		case 40:	c.engine.keys.down	= true;				break;
+		case 65:	// a or left
+		case 37:	c.engine.keys.left	= true; break;
+
+		case 87:	// w or up
+		case 38:	c.engine.keys.up	= true; break;
+
+		case 68:	// d or right
+		case 39:	c.engine.keys.right	= true; break;
+
+		case 83:	// s or down
+		case 40:	c.engine.keys.down	= true; break;
 
 		/* Tab to toggle debug */
-		case 9:		c.engine.debug		= !c.engine.debug;	break;
+		case 9:		c.engine.debug = !c.engine.debug; break;
+
+		default:	return;
 	}
 
 	e.preventDefault();
@@ -383,10 +393,19 @@ window.addEventListener('keyup', function(e)
 	var c = document.getElementById('game');
 
 	switch (e.keyCode) {
-		case 37: c.engine.keys.left		= false; break;
-		case 38: c.engine.keys.up		= false; break;
-		case 39: c.engine.keys.right	= false; break;
-		case 40: c.engine.keys.down		= false; break;
+		case 65:	// a or left
+		case 37:	c.engine.keys.left	= false; break;
+
+		case 87:	// w or up
+		case 38:	c.engine.keys.up	= false; break;
+
+		case 68:	// d or right
+		case 39:	c.engine.keys.right	= false; break;
+
+		case 83:	// s or down
+		case 40:	c.engine.keys.down	= false; break;
+
+		default:	return;
 	}
 
 	e.preventDefault();
