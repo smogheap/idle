@@ -23,6 +23,9 @@ function IdleEngine(canvas)
 
 	this.tileSize			= [ 32, 16 ];
 
+	/* Offset for rendering in the middle of the screen */
+	this.offset				= [ 300, 50 ];
+
 	this.canvas.engine		= this;
 
 	this.seed				= WRand.getSeed(NaN);
@@ -48,42 +51,36 @@ IdleEngine.prototype.world = {
 	],
 
 	"map": [
-		"0 0 0 0 0 0 0 0 0 0 0 2 1 0 0 ",
-		" 0 0 0 0 0 0 0 0 0 0 2 0 1 0 0",
-		"0 4 0 0 0 0 0 0 0 0 1 0 0 1 0 ",
-		" 0 0 0 0 0 0 0 0 0 0 1 0 3 1 0",
-		"0 0 0 0 0 0 0 0 0 3 0 1 0 0 2 ",
-		" 0 0 0 0 0 0 0 0 0 0 0 1 0 2 0",
-		"0 0 0 0 0 0 0 0 0 0 0 0 1 2 0 ",
-		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
-		"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ",
-		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
-		"0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 ",
-		" 0 0 0 2 1 0 0 0 0 0 0 0 0 0 0",
-		"0 0 0 2 0 1 0 0 0 0 0 0 0 0 0 ",
-		" 0 4 2 0 0 1 0 0 0 0 0 0 0 0 0",
-		"0 0 2 0 0 0 1 0 0 0 0 0 0 0 0 ",
-		" 0 1 0 0 0 0 2 0 0 0 0 0 0 0 0",
-		"0 0 1 0 0 0 2 0 0 0 0 0 0 0 0 ",
-		" 0 0 1 0 0 2 0 0 0 0 0 0 0 0 0",
-		"0 0 0 1 0 2 0 0 0 0 0 0 0 0 0 ",
-		" 0 0 0 1 2 0 0 0 4 0 0 0 0 0 0",
-		"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ",
-		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
-		"0 0 0 0 0 0 3 0 0 0 0 0 0 0 0 ",
-		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
-		"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ",
-		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
-		"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ",
-		" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+		"                    ",
+		"           2111112  ",
+		"           2     2  ",
+		"           2  3  2  ",
+		"           2  44 2  ",
+		"           2     2  ",
+		"           2     2  ",
+		"      4     11111   ",
+		"                    ",
+		"                    ",
+		"          4         ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"        4           ",
+		"                    ",
+		"11111111111112      ",
+		"             2      ",
+		"             2      ",
+		"             2      "
 	]
 };
 
-IdleEngine.prototype.getTile = function getTile(name)
+IdleEngine.prototype.getTile = function getTile(name, type)
 {
+	type = type || 'tiles';
+
 	if (!this.tiles[name]) {
 		this.tiles[name] = new Image();
-		this.tiles[name].src = 'tiles/' + name + '.png';
+		this.tiles[name].src = type + '/' + name + '.png';
 	}
 
 	return(this.tiles[name]);
@@ -104,66 +101,95 @@ IdleEngine.prototype.loadTiles = function loadTiles(names, cb)
 	}
 };
 
-IdleEngine.prototype.render= function render()
+/* Convert from isometric to cartesian */
+IdleEngine.prototype.isoToCart = function isoToCart(x, y)
+{
+	var tx = (2 * y + x) / 2;
+	var ty = (2 * y - x) / 2;
+
+	return([ Math.round(tx), Math.round(ty) ]);
+};
+
+/* Convert from cartesian to isometric */
+IdleEngine.prototype.cartToIso = function cartToIso(x, y)
+{
+	var tx	= x - y;
+	var ty	= (x + y) / 2;
+
+	return([ Math.round(tx), Math.round(ty) ]);
+};
+
+IdleEngine.prototype.outlineTile = function outlineTile(x, y, color)
+{
+	this.ctx.save();
+
+	x += this.offset[0];
+	y += this.offset[1] - 1;
+
+	this.ctx.strokeStyle = color || 'rgba(255, 255, 255, 1.0)';
+	this.ctx.beginPath();
+	this.ctx.moveTo(x, y);
+	this.ctx.lineTo(x - (this.tileSize[0] / 2), y - (this.tileSize[1] / 2));
+	this.ctx.lineTo(x, y - this.tileSize[1]);
+	this.ctx.lineTo(x + (this.tileSize[0] / 2), y - (this.tileSize[1] / 2));
+	this.ctx.lineTo(x, y);
+	this.ctx.stroke();
+
+	this.ctx.restore();
+};
+
+IdleEngine.prototype.render = function render(map, characters)
 {
 	var l		= 0;	/* Left	*/
 	var t		= 0;	/* Top	*/
 	var eltile	= this.getTile('elevation');
 
-	this.ctx.save();
-	this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+	/*
+		Calculate the bottom center position of each character that is on the
+		screen and determine which tile the character is on.
+	*/
+	for (var i = 0, npc; npc = characters[i]; i++) {
+		npc.tile = this.getTile(npc.name, 'characters');
 
-	for (var y = 0, row; row = this.world.map[y]; y++) {
+		/* Position on the screen of the character */
+		npc.iso = this.isoToCart(
+			Math.round(npc.x / this.tileSize[1]),
+			Math.round(npc.y / this.tileSize[1]));
+	}
+
+	for (var r = 0, row; row = map.map[r]; r++) {
 		/* Strip whitespace */
-		row = row.replace(/\s/g, '');
+		row = row.replace(/\s/g, '0');
 
-		for (var x = 0, index; (index = row.charAt(x)) && index.length == 1; x++) {
-			var tile = this.getTile(this.world.tiles[index]);
+		for (var c = 0, t; (t = row.charAt(c)) && t.length == 1; c++) {
+			var x = c * this.tileSize[1];
+			var y = r * this.tileSize[1];
+			var tile = this.getTile(map.tiles[t * 1]);
 
-			/* Figure out the position for the tile */
-			t = (y * (this.tileSize[1] / 2));
-			l = (x * (this.tileSize[0]));
+			/* Calculate isometric coords */
+			var iso = this.cartToIso(x, y);
 
-			if (false) { // debug
-				t += y * 2;
-				l += x * 2;
+			this.ctx.drawImage(tile,
+				iso[0] - (tile.width / 2)	+ this.offset[0],
+				iso[1] - (tile.height)		+ this.offset[1]);
+
+			// this.outlineTile(iso[0], iso[1]);
+
+			/* Are there any characters standing on this tile? */
+			for (var i = 0, npc; npc = characters[i]; i++) {
+				if (c == npc.iso[0] && r == npc.iso[1]) {
+					/* Bottom center position of the character */
+					var l = npc.x - npc.tile.width / 2;
+					var t = npc.y - npc.tile.height;
+
+					this.ctx.drawImage(npc.tile,
+						l + this.offset[0],
+						t + this.offset[1]);
+
+					// DEBUG
+					this.outlineTile(iso[0], iso[1], 'rgba(0, 0, 0, 1.0)');
+				}
 			}
-
-			if (y % 2 != 0) {
-				l += this.tileSize[0] / 2;
-			}
-
-			/*
-				Adjust the height of the tile based on it's elevation.
-			*/
-			// TODO	Read elevation from the map...
-			var elevation = 0;
-
-			if (elevation < 3 && elevation > 0) {
-				t -= elevation * this.tileSize[1];
-
-				var el = l;
-				var et = t;
-
-				/*
-					Adjust so we're drawing from the point that the bottom
-					center of the real tile should be.
-				*/
-				el -= eltile.width / 2;
-				et -= this.tileSize[1] / 2;
-
-				/* Draw the elevation image */
-				this.ctx.drawImage(eltile, el, et);
-			}
-
-			/*
-				Adjust for the size of the tile so that we render each tile from
-				the bottom center.
-			*/
-			l -= tile.width / 2;
-			t -= tile.height;
-
-			this.ctx.drawImage(tile, l, t);
 		}
 	}
 
@@ -172,7 +198,10 @@ IdleEngine.prototype.render= function render()
 	this.ctx.fillStyle = this.timeToColor(time);
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-	this.ctx.restore();
+	for (var i = 0, npc; npc = characters[i]; i++) {
+		this.ctx.fillStyle = 'rgba(255, 0, 0, 1.0)';
+		this.ctx.fillRect(npc.x - 1 + this.offset[0], npc.y - 1 + this.offset[1], 3, 3);
+	}
 };
 
 IdleEngine.prototype.timeColors = [
@@ -230,10 +259,44 @@ IdleEngine.prototype.timeToColor = function timeToColor(time)
 
 IdleEngine.prototype.start = function start()
 {
-	this.loadTiles(this.world.tiles, function() {
+	var speed	= 3;
+	var fps		= 30;
+	// var fps		= 1;
+
+	this.characters = [{
+		name:		"idle",
+		x:			10 * this.tileSize[0],
+		y:			10 * this.tileSize[1]
+	}];
+
+	this.keys = {};
+
+	var tiles = this.world.tiles.concat(this.world.elevations);
+
+	this.loadTiles(tiles, function() {
 		this.resize();
-		setInterval(this.render.bind(this), 1000/30);
-		// setInterval(this.render.bind(this), 1000/3);
+		setInterval(function() {
+			this.ctx.save();
+			this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+			/* Move idle based on keyboard input */
+			if (this.keys.left) {
+				this.characters[0].x -= speed;
+			}
+			if (this.keys.right) {
+				this.characters[0].x += speed;
+			}
+
+			if (this.keys.up) {
+				this.characters[0].y -= speed;
+			}
+			if (this.keys.down) {
+				this.characters[0].y += speed;
+			}
+
+			this.render(this.world, this.characters);
+			this.ctx.restore();
+		}.bind(this), 1000 / fps);
 	}.bind(this));
 };
 
@@ -243,17 +306,42 @@ IdleEngine.prototype.resize = function resize()
 	this.canvas.height	= window.innerHeight;
 };
 
-window.addEventListener('load', function() {
+window.addEventListener('load', function()
+{
 	var c		= document.getElementById('game');
 	var engine	= new IdleEngine(c);
 
 	engine.start();
 }, false);
 
-window.addEventListener('resize', function() {
+window.addEventListener('resize', function()
+{
 	var c = document.getElementById('game');
 
 	c.engine.resize();
 }, false);
 
+window.addEventListener('keydown', function(e)
+{
+	var c = document.getElementById('game');
+
+	switch (e.keyCode) {
+		case 37: c.engine.keys.left		= true; break;
+		case 38: c.engine.keys.up		= true; break;
+		case 39: c.engine.keys.right	= true; break;
+		case 40: c.engine.keys.down		= true; break;
+	}
+}, false);
+
+window.addEventListener('keyup', function(e)
+{
+	var c = document.getElementById('game');
+
+	switch (e.keyCode) {
+		case 37: c.engine.keys.left		= false; break;
+		case 38: c.engine.keys.up		= false; break;
+		case 39: c.engine.keys.right	= false; break;
+		case 40: c.engine.keys.down		= false; break;
+	}
+}, false);
 
