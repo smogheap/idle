@@ -27,10 +27,6 @@ function IdleEngine(canvas)
 	/* Offset for rendering in the middle of the screen */
 	this.offset				= [ 320, 50 ];
 
-	/* Visual offset for rendering a character */
-	// this.charOffset			= [ 0, 6 ];
-	this.charOffset			= [ 0, 0 ];
-
 	this.canvas.engine		= this;
 
 	this.seed				= WRand.getSeed(NaN);
@@ -40,42 +36,87 @@ function IdleEngine(canvas)
 }
 
 IdleEngine.prototype.tiles = {
-	" ": { name: "grass"													},
-	"%": { name: "rock"														},
-	"'": { name: "rock",		elevation: 0.5, elname: "elevation-rock"	},
-	"#": { name: "rock",		elevation: 1.0, elname: "elevation-rock"	},
-	".": { name: "rock",		elevation: 0.5, elname: "elevation-rock"	},
-	"_": { name: "grass",		elevation: 1.0, elname: "elevation-soil"	},
-	"=": { name: "rock",		elevation: 2.0, elname: "elevation-rock"	},
-	":": { name: "grass",		elevation: 1.5, elname: "elevation-soil"	},
-	"o": { name: "puddle"													},
-	"O": { name: "hole"														},
-	"-": { name: "fence-ne",	solid: true									},
-	"|": { name: "fence-nw",	solid: true									}
+	" ": { name: "grass",	side: "elevation-soil"			},
+	"_": { name: "grass",	side: "elevation-soil-fossil1"	},
+	"#": { name: "rock",	side: "elevation-rock"			},
+	"%": { name: "rock",	side: "elevation-rock-fossil2"	},
+	"o": { name: "puddle"									},
+	"O": { name: "hole"										},
+	"-": { name: "fence-ne"									},
+	"|": { name: "fence-nw"									}
 };
 
 IdleEngine.prototype.world = {
-	"map": [
-		"=======_=           ",
-		"_==::      |-----|  ",
-		"  __.      |     |  ",
-		"  .        |  O  |  ",
-		"           |  oo |  ",
-		"  =        |     |  ",
-		"  =        |     |# ",
-		"      o     -----   ",
-		"               '''%%",
+	/* A map of the tiles on the ground */
+	"ground": [
+		"# #### ##__         ",
+		" ####%%%            ",
+		"  # #               ",
+		"  #           O     ",
+		"              oo    ",
+		"  #                 ",
+		"  #               # ",
+		"      o             ",
+		"               #####",
 		"              ##    ",
-		"          o '''     ",
-		"             %      ",
-		"            %%      ",
-		"           %%       ",
-		"%%      o  %        ",
-		"  %%%%%%% %         ",
-		"-------------|      ",
-		"             |      ",
-		"   OOO       |      ",
-		"             |      "
+		"          o ###     ",
+		"             #      ",
+		"            ##      ",
+		"           ##       ",
+		"##      o  #        ",
+		"  ####### #         ",
+		"                    ",
+		"                    ",
+		"   OOO              ",
+		"                    "
+	],
+
+	/* An elevation map, default is 5. Values are in hex */
+	"elevation": [
+		"acbabb 9876         ",
+		" 9aba999            ",
+		"  8 6               ",
+		"  6                 ",
+		"                    ",
+		"  9           877   ",
+		"  9             766 ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    "
+	],
+
+	/* A map of any props */
+	"props": [
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                    ",
+		"                 ---",
+		"                |   ",
+		"                |   ",
+		"                |   ",
+		"                |   ",
+		"                 ---",
+		"--------            ",
+		"        |           ",
+		"        |           "
 	]
 };
 
@@ -174,28 +215,55 @@ IdleEngine.prototype.outlineTile = function outlineTile(full, x, y, color)
 	this.ctx.restore();
 };
 
+/* Return a tile based on the ground, elevation & props maps for this screen */
 IdleEngine.prototype.getMapTile = function getMapTile(map, x, y)
 {
-	if (y < 0 || y >= map.length || x < 0 || x >= map[y].length) {
+	var tile = {};
+	var line;
+	var c;
+	var t;
+
+	/* Get the ground and side tile from the first map */
+	if ((line = map.ground[y]) && (c = line.charAt(x)) && c.length == 1) {
+		if ((t = this.tiles[c])) {
+			if (t.name) {
+				tile.img = this.getImage(t.name);
+			}
+
+			if (t.side) {
+				tile.side = this.getImage(t.side);
+			}
+		}
+	}
+
+	if (!tile.img) {
+		/* A tile requires at least a ground tile */
 		return(null);
 	}
 
-	var c = map[y].charAt(x);
-	var t = this.tiles[c];
-
-	/* Main image */
-	if (t.name && !t.img) {
-		t.img = this.getImage(t.name);
+	/* Get the elevation */
+	if (tile.side && (line = map.elevation[y]) && (c = line.charAt(x)) && c.length == 1) {
+		tile.elevation = parseInt(c, 16);
 	}
 
-	/* Elevation image */
-	if (t.elname && !t.elimg) {
-		t.elimg = this.getImage(t.elname);
+	if (isNaN(tile.elevation)) {
+		/* default to ground level */
+		tile.elevation = 5;
 	}
 
-	return(t);
+	/* Is there a prop on this tile? */
+	if ((line = map.props[y]) && (c = line.charAt(x)) && c.length == 1) {
+		if (c != ' ' && (t = this.tiles[c])) {
+			if (t.name) {
+				tile.prop = this.getImage(t.name);
+			}
+		}
+	}
+
+	return(tile);
 };
 
+// TODO	Update...
 IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
 {
 	if (y < 0 || y >= map.length || x < 0 || x >= map[y].length) {
@@ -209,19 +277,19 @@ IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
 
 IdleEngine.prototype.render = function render(map, characters)
 {
+	/* Ground level is at an elevation of 5 */
+	var ground	= 5;
+
 	/*
 		Calculate the bottom center position of each character that is on the
 		screen and determine which tile the character is on.
 	*/
 	for (var i = 0, npc; npc = characters[i]; i++) {
 		/*
-			Calculate the isometric coords of the character since the screen is
-			rendered that way.
-
+			Calculate the map coords of the character so we know when to render
+			him/her.
 		*/
-		npc.renderat	= this.isoToMap(npc.x + this.charOffset[0],
-								npc.y + this.charOffset[1]);
-		npc.reallyat	= this.isoToMap(npc.x, npc.y);
+		npc.map = this.isoToMap(npc.x, npc.y);
 	}
 
 	/* Set some clipping for the game area */
@@ -231,6 +299,7 @@ IdleEngine.prototype.render = function render(map, characters)
 	var x = this.offset[0];
 	var y = this.offset[1] - this.tileSize[1] / 2;
 
+	// TODO	Show a bit below ground in the clipping just like we do above ground
 	this.ctx.moveTo(x, y - 3 - (this.tileSize[1] * 4));
 	this.ctx.lineTo(x + (10 * this.tileSize[0]) + 3,
 					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 4));
@@ -245,78 +314,77 @@ IdleEngine.prototype.render = function render(map, characters)
 	this.ctx.lineTo(x, y - 3 - (this.tileSize[1] * 4));
 	this.ctx.clip();
 
+	var tile;
 
-	for (var row = 0; row < map.length * 4; row++) {
-		var maxel = 0;
-
+	/*
+		Render each row in 2 passes, one for the ground at elevation (and sides)
+		and another for the characters and props.
+	*/
+	for (var row = 0; row < map.ground.length * 4; row++) {
+		/* First pass for ground */
 		for (var x = 0, y = row; x <= row; y--, x++) {
-			var tile = this.getMapTile(map, x, y);
+			if (!(tile = this.getMapTile(map, x, y))) {
+				continue;
+			}
 
-			if (!tile) continue;
-			if (tile.elevation > maxel) {
-				maxel = tile.elevation;
+			/* Calculate isometric coords */
+			var iso = this.mapToIso(x, y);
+
+			/* Calculate the elevation offset for this pass */
+			var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
+
+			if (tile.side) {
+				this.ctx.drawImage(tile.side,
+					iso[0] + this.offset[0] - (tile.side.width / 2),
+					iso[1] + this.offset[1] - (this.tileSize[1] / 2) - eloff);
+			}
+
+			this.ctx.drawImage(tile.img,
+				iso[0] + this.offset[0] - (tile.img.width / 2),
+				iso[1] + this.offset[1] - tile.img.height - eloff);
+
+			if (this.debug) {
+				this.outlineTile(false, iso[0], iso[1] - eloff,
+						'rgba(0, 0, 0, 0.6)');
 			}
 		}
 
-		for (var el = 0; el <= maxel; el += 0.5) {
-			for (var x = 0, y = row; x <= row; y--, x++) {
-				var tile = this.getMapTile(map, x, y);
+		/* 2nd pass for characters and props */
+		for (var x = 0, y = row; x <= row; y--, x++) {
+			if (!(tile = this.getMapTile(map, x, y))) {
+				continue;
+			}
 
-				if (!tile) continue;
-				if (tile.elevation != el) continue;
+			/* Calculate isometric coords */
+			var iso = this.mapToIso(x, y);
 
-				/* Calculate isometric coords */
-				var iso = this.mapToIso(x, y);
+			/* Calculate the elevation offset for this pass */
+			var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
 
-				if (tile.elevation > 0) {
-					this.ctx.drawImage(tile.elimg,
-						iso[0] + this.offset[0] - (tile.elimg.width / 2),
-						iso[1] + this.offset[1] - (this.tileSize[1] / 2) -
-							(tile.elevation * this.tileSize[1]));
-				}
-
-				this.ctx.drawImage(tile.img,
-					iso[0] + this.offset[0] - (tile.img.width / 2),
-					iso[1] + this.offset[1] - tile.img.height -
-							(tile.elevation * this.tileSize[1]));
-
-				if (this.debug) {
-					this.outlineTile(false, iso[0],
-						iso[1] - (tile.elevation * this.tileSize[1]),
-						'rgba(0, 0, 0, 0.6)');
-				}
-
-				/* Are there any characters standing on this tile? */
-				for (var i = 0, npc; npc = characters[i]; i++) {
-					/* Get the tile he is really on for the sake of elevation */
-					tile = this.getMapTile(map, npc.reallyat[0], npc.reallyat[1]);
-
+			/* Are there any characters standing on this tile? */
+			for (var i = 0, npc; npc = characters[i]; i++) {
+				if (x == npc.map[0] && y == npc.map[1]) {
 					if (this.debug) {
-						if (x == npc.reallyat[0] && y == npc.reallyat[1]) {
-							this.outlineTile(true, iso[0],
-								iso[1] - (tile.elevation * this.tileSize[1]),
-								'rgba(255, 0, 0, 0.5)');
-						}
+						this.outlineTile(true, iso[0], iso[1] - eloff,
+							'rgba(0, 0, 255, 0.3)');
 					}
 
-					if (x == npc.renderat[0] && y == npc.renderat[1]) {
-						if (this.debug) {
-							this.outlineTile(true, iso[0],
-								iso[1] - (tile.elevation * this.tileSize[1]),
-								'rgba(0, 0, 255, 0.3)');
-						}
+					/* Bottom center position of the character */
+					var l = npc.x - (npc.img.width / 2);
+					var t = npc.y - (npc.img.height);
 
-						/* Bottom center position of the character */
-						var l = npc.x - (npc.img.width / 2);
-						var t = npc.y - (npc.img.height);
-
-						/* Offset the character by 2 pixels */
-						this.ctx.drawImage(npc.img,
-							l + this.offset[0],
-							t + this.offset[1] -
-									(tile.elevation * this.tileSize[1]));
-					}
+					/* Offset the character by 2 pixels */
+					this.ctx.drawImage(npc.img,
+						l + this.offset[0],
+						t + this.offset[1] - eloff + 2);
 				}
+			}
+
+			/* Render any props for this tile */
+			if (tile.prop) {
+				this.ctx.drawImage(tile.prop,
+					iso[0] + this.offset[0] - (tile.prop.width / 2),
+					iso[1] + this.offset[1] - tile.prop.height - eloff);
 			}
 		}
 	}
@@ -436,74 +504,33 @@ IdleEngine.prototype.getTimeStr = function getTimeStr(time)
 //		not be standing right next to it afterwards...
 IdleEngine.prototype.canWalk = function canWalk(map, to, from)
 {
-	var		waist	= 6;
-
 	if (this.debug) {
 		return(true);
 	}
 
-	/*
-		Build a list of coordinates to check
+	var fromM	= this.isoToMap(from[0], from[1]);
+	var toM		= this.isoToMap(to[0], to[1]);
 
-		Idle is not just a single pixel... Make sure there is room for him.
+	var fromT	= this.getMapTile(map, fromM[0], fromM[1]);
+	var toT		= this.getMapTile(map, toM[0], toM[1]);
 
-		Only check in the direction we are heading though, so we aren't blocked
-		because of something behind him.
-	*/
-	var m = [];
-
-	m.push(this.isoToMap(from[0], from[1]));
-	m.push(this.isoToMap(to[0], to[1]));
-
-	if (to[1] < from[1]) {
-		m.push(this.isoToMap(to[0] - waist * 2, to[1] - waist));
-		m.push(this.isoToMap(to[0] + waist * 2, to[1] - waist));
+	if (!fromT) {
+		return(true);
 	}
 
-	if (to[1] > from[1]) {
-		m.push(this.isoToMap(to[0] - waist * 2, to[1] + waist));
-		m.push(this.isoToMap(to[0] + waist * 2, to[1] + waist));
+	if (toT.elevation - fromT.elevation > 1) {
+		/* He can't climb something that steep */
+		return(false);
 	}
 
-	if (to[0] < from[0]) {
-		m.push(this.isoToMap(to[0] - waist * 2, to[1] - waist));
-		m.push(this.isoToMap(to[0] - waist * 2, to[1] + waist));
+	if (fromT.elevation - toT.elevation > 2) {
+		/* We wouldn't want him to hurt himself */
+		return(false);
 	}
 
-	if (to[0] > from[0]) {
-		m.push(this.isoToMap(to[0] + waist * 2, to[1] - waist));
-		m.push(this.isoToMap(to[0] + waist * 2, to[1] + waist));
-	}
-
-
-	var tiles = [];
-	for (var i = 0, tmp; tmp = m[i]; i++) {
-		tiles.push(this.getMapTile(map, tmp[0], tmp[1]));
-	}
-
-	var w = tiles[0];
-	for (var i = 1, t; t = tiles[i]; i++) {
-		if (!t) continue;
-
-		if (t.solid) {
-			return(false);
-		}
-
-		if (w) {
-			if (t.elevation - w.elevation > 0.5) {
-				/* He can't climb that high */
-				return(false);
-			}
-
-			if (w.elevation - t.elevation > 1.0) {
-				/*
-					If we let him fall from that height then we'll have to
-					implement a health meter, and let him die!.
-				*/
-				// TODO	Implement a health meter and let him die
-				return(false);
-			}
-		}
+	if (toT.prop) {
+		/* He shouldn't walk into things, that would hurt */
+		return(false);
 	}
 
 	return(true);
@@ -600,7 +627,7 @@ IdleEngine.prototype.start = function start()
 					y += speed / 2;
 				}
 
-				if (this.canWalk(this.world.map, [ x, y ],
+				if (this.canWalk(this.world, [ x, y ],
 						[ this.characters[0].x, this.characters[0].y ])
 				) {
 					/* Yup, all good */
@@ -609,7 +636,7 @@ IdleEngine.prototype.start = function start()
 				}
 			}
 
-			this.render(this.world.map, this.characters);
+			this.render(this.world, this.characters);
 
 			this.ctx.font = '20pt Arial';
 			this.ctx.fillStyle = 'rgb(255, 255, 255)';
