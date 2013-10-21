@@ -353,16 +353,6 @@ IdleEngine.prototype.start = function start()
 			this.ctx.fillStyle = 'rgb(0, 0, 0)';
 			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-			this.ctx.font = '20pt Arial';
-			this.ctx.fillStyle = 'rgb(255, 255, 255)';
-			this.ctx.fillText('idle', 10, 30);
-
-			this.ctx.font = '10pt Arial';
-			this.ctx.fillStyle = 'rgb(255, 255, 255)';
-			this.ctx.fillText('Press tab to toggle grid', 10, 50);
-			this.ctx.fillText('arrows or wasd to move', 10, 70);
-			this.ctx.fillText(this.getTimeStr(), 620, 50);
-
 			/* Move idle based on keyboard input */
 			if (this.keys.left) {
 				this.characters[0].x -= speed;
@@ -384,6 +374,17 @@ IdleEngine.prototype.start = function start()
 			}
 
 			this.render(this.world, this.characters);
+
+			this.ctx.font = '20pt Arial';
+			this.ctx.fillStyle = 'rgb(255, 255, 255)';
+			this.ctx.fillText('idle', 10, 30);
+
+			this.ctx.font = '10pt Arial';
+			this.ctx.fillStyle = 'rgb(255, 255, 255)';
+			this.ctx.fillText('Press tab to toggle grid', 10, 50);
+			this.ctx.fillText('arrows or wasd to move', 10, 70);
+			this.ctx.fillText(this.getTimeStr(), 620, 50);
+
 			this.ctx.restore();
 		}.bind(this), 1000 / fps);
 	}.bind(this));
