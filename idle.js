@@ -25,7 +25,7 @@ function IdleEngine(canvas)
 	this.tileSize			= [ 32, 16 ];
 
 	/* Offset for rendering in the middle of the screen */
-	this.offset				= [ 350, 50 ];
+	this.offset				= [ 320, 50 ];
 
 	/* Visual offset for rendering a character */
 	// this.charOffset			= [ 0, 6 ];
@@ -431,6 +431,9 @@ IdleEngine.prototype.getTimeStr = function getTimeStr(time)
 	Based on a characters coords (iso, not map) determine if the character is
 	allowed to move from one spot to another.
 */
+// TODO	Perhaps there should be cases where Idle gets pushed a bit further
+//		forward... For example... He can walk off a cliff, but then he should
+//		not be standing right next to it afterwards...
 IdleEngine.prototype.canWalk = function canWalk(map, to, from)
 {
 	var		waist	= 6;
@@ -616,7 +619,7 @@ IdleEngine.prototype.start = function start()
 			this.ctx.fillStyle = 'rgb(255, 255, 255)';
 			this.ctx.fillText('Press tab to toggle grid', 10, 50);
 			this.ctx.fillText('arrows or wasd to move', 10, 70);
-			this.ctx.fillText(this.getTimeStr(), 620, 50);
+			this.ctx.fillText(this.getTimeStr(), 580, 50);
 
 			this.ctx.restore();
 		}.bind(this), 1000 / fps);
