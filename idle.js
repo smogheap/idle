@@ -475,23 +475,25 @@ IdleEngine.prototype.start = function start()
 				var w	= this.characters[0].tile;
 
 				while (w && t) {
-					/* Is idle allowed to move there? */
-					if (t.solid) {
-						/* It is something solid, like a fence */
-						break;
-					}
+					if (!this.debug) {
+						/* Is idle allowed to move there? */
+						if (t.solid) {
+							/* It is something solid, like a fence */
+							break;
+						}
 
-					if (t.elevation - w.elevation > 0.5) {
-						/* He can't climb that high */
-						break;
-					}
+						if (t.elevation - w.elevation > 0.5) {
+							/* He can't climb that high */
+							break;
+						}
 
-					if (w.elevation - t.elevation > 1.0) {
-						/*
-							If we let him fall from that height then we'll have
-							to implement a health meter, and let him die!.
-						*/
-						break;
+						if (w.elevation - t.elevation > 1.0) {
+							/*
+								If we let him fall from that height then we'll have
+								to implement a health meter, and let him die!.
+							*/
+							break;
+						}
 					}
 
 					/* Yup, all good */
