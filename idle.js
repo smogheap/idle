@@ -25,7 +25,7 @@ function IdleEngine(canvas)
 	this.tileSize			= [ 32, 16 ];
 
 	/* Offset for rendering in the middle of the screen */
-	this.offset				= [ 320, 50 ];
+	this.offset				= [ 160, 55 ];
 
 	this.canvas.engine		= this;
 
@@ -33,6 +33,8 @@ function IdleEngine(canvas)
 
 	/* Start at noon */
 	this.time				= 0.5;
+
+	this.start();
 }
 
 IdleEngine.prototype.tiles = {
@@ -49,74 +51,47 @@ IdleEngine.prototype.tiles = {
 IdleEngine.prototype.world = {
 	/* A map of the tiles on the ground */
 	"ground": [
-		"# #### ##__         ",
-		" ####%%%            ",
-		"  # #               ",
-		"  #           O     ",
-		"              oo    ",
-		"  #                 ",
-		"  #               # ",
-		"      o             ",
-		"               #####",
-		"              ##    ",
-		"          o ###     ",
-		"             #      ",
-		"            ##      ",
-		"           ##       ",
-		"##      o  #        ",
-		"  ####### #         ",
-		"                    ",
-		"                    ",
-		"   OOO              ",
-		"                    "
+		"# ### ##__ ",
+		" ####%%    ",
+		"  # #      ",
+		"  #   O    ",
+		"      oo   ",
+		"           ",
+		"   #       ",
+		"  #        ",
+		"  #  ##  # ",
+		" ##o#  ####",
+		"        #  "
 	],
 
 	/* An elevation map, default is 5. Values are in hex */
 	"elevation": [
-		"acbabb 9876         ",
-		" 9aba999            ",
-		"  8 6               ",
-		"  6                 ",
-		"                    ",
-		"  9           877   ",
-		"  9             766 ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    "
+		"acbaa 9876 ",
+		" 9ab999    ",
+		"  8 6      ",
+		"  6        ",
+		"           ",
+		"     877   ",
+		"       766 ",
+		"           ",
+		"           ",
+		"           ",
+		"           "
 	],
 
 	/* A map of any props */
 	"props": [
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                    ",
-		"                 ---",
-		"                |   ",
-		"                |   ",
-		"                |   ",
-		"                |   ",
-		"                 ---",
-		"--------            ",
-		"        |           ",
-		"        |           "
+		"           ",
+		"           ",
+		"           ",
+		"        ---",
+		"       |   ",
+		"       |   ",
+		"       |   ",
+		"        ---",
+		"------     ",
+		"      |    ",
+		"      |    "
 	]
 };
 
@@ -298,19 +273,19 @@ IdleEngine.prototype.render = function render(map, characters)
 
 	var x = this.offset[0];
 	var y = this.offset[1] - this.tileSize[1] / 2;
+	var w = this.world.ground.length / 2;
 
-	// TODO	Show a bit below ground in the clipping just like we do above ground
 	this.ctx.moveTo(x, y - 3 - (this.tileSize[1] * 4));
-	this.ctx.lineTo(x + (10 * this.tileSize[0]) + 3,
-					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 4));
-	this.ctx.lineTo(x + (10 * this.tileSize[0]) + 3,
-					y + (10 * this.tileSize[1]) - 1);
+	this.ctx.lineTo(x + (w * this.tileSize[0]) + 3,
+					y + (w * this.tileSize[1]) - (this.tileSize[1] * 4));
+	this.ctx.lineTo(x + (w * this.tileSize[0]) + 3,
+					y + (w * this.tileSize[1]) - 1);
 	this.ctx.lineTo(x,
-					y + (20 * this.tileSize[1]) + 3 - 2);
-	this.ctx.lineTo(x - (10 * this.tileSize[0]) - 3,
-					y + (10 * this.tileSize[1]) - 1);
-	this.ctx.lineTo(x - (10 * this.tileSize[0]) - 3,
-					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 4));
+					y + (w * 2 * this.tileSize[1]) + 3 - 2);
+	this.ctx.lineTo(x - (w * this.tileSize[0]) - 3,
+					y + (w * this.tileSize[1]) - 1);
+	this.ctx.lineTo(x - (w * this.tileSize[0]) - 3,
+					y + (w * this.tileSize[1]) - (this.tileSize[1] * 4));
 	this.ctx.lineTo(x, y - 3 - (this.tileSize[1] * 4));
 	this.ctx.clip();
 
@@ -639,13 +614,13 @@ IdleEngine.prototype.start = function start()
 
 			this.ctx.font = '20pt Arial';
 			this.ctx.fillStyle = 'rgb(255, 255, 255)';
-			this.ctx.fillText('idle', 10, 30);
+			this.ctx.fillText('idle', 5, 25);
 
-			this.ctx.font = '10pt Arial';
+			this.ctx.font = '5pt Arial';
 			this.ctx.fillStyle = 'rgb(255, 255, 255)';
-			this.ctx.fillText('Press tab to toggle grid', 10, 50);
-			this.ctx.fillText('arrows or wasd to move', 10, 70);
-			this.ctx.fillText(this.getTimeStr(), 580, 50);
+			this.ctx.fillText('Press tab to toggle grid', 5, 35);
+			this.ctx.fillText('arrows or wasd to move', 5, 45);
+			this.ctx.fillText(this.getTimeStr(), 5, 55);
 
 			this.ctx.restore();
 		}.bind(this), 1000 / fps);
@@ -654,16 +629,16 @@ IdleEngine.prototype.start = function start()
 
 IdleEngine.prototype.resize = function resize()
 {
-	this.canvas.width	= window.innerWidth;
-	this.canvas.height	= window.innerHeight;
+	// For now use a fixed size
+
+	// this.canvas.width	= window.innerWidth;
+	// this.canvas.height	= window.innerHeight;
 };
 
 window.addEventListener('load', function()
 {
 	var c		= document.getElementById('game');
 	var engine	= new IdleEngine(c);
-
-	engine.start();
 }, false);
 
 window.addEventListener('resize', function()
