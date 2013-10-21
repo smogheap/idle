@@ -411,16 +411,20 @@ window.addEventListener('keydown', function(e)
 	var c = document.getElementById('game');
 
 	switch (e.keyCode) {
-		case 65:	// a or left
+		case 65:	// a, h or left
+		case 72:
 		case 37:	c.engine.keys.left	= true; break;
 
-		case 87:	// w or up
+		case 87:	// w, k or up
+		case 75:
 		case 38:	c.engine.keys.up	= true; break;
 
-		case 68:	// d or right
+		case 68:	// d, l or right
+		case 76:
 		case 39:	c.engine.keys.right	= true; break;
 
-		case 83:	// s or down
+		case 83:	// s, j or down
+		case 74:
 		case 40:	c.engine.keys.down	= true; break;
 
 		/* Tab to toggle debug */
@@ -437,16 +441,20 @@ window.addEventListener('keyup', function(e)
 	var c = document.getElementById('game');
 
 	switch (e.keyCode) {
-		case 65:	// a or left
+		case 65:	// a, h or left
+		case 72:
 		case 37:	c.engine.keys.left	= false; break;
 
-		case 87:	// w or up
+		case 87:	// w, k or up
+		case 75:
 		case 38:	c.engine.keys.up	= false; break;
 
-		case 68:	// d or right
+		case 68:	// d, l or right
+		case 76:
 		case 39:	c.engine.keys.right	= false; break;
 
-		case 83:	// s or down
+		case 83:	// s, j or down
+		case 74:
 		case 40:	c.engine.keys.down	= false; break;
 
 		default:	return;
