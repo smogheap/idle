@@ -373,10 +373,9 @@ IdleEngine.prototype.render = function render(map, characters)
 					var l = npc.x - (npc.img.width / 2);
 					var t = npc.y - (npc.img.height);
 
-					/* Offset the character by 2 pixels */
 					this.ctx.drawImage(npc.img,
 						l + this.offset[0],
-						t + this.offset[1] - eloff + 2);
+						t + this.offset[1] - eloff);
 				}
 			}
 
