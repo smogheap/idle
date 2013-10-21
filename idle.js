@@ -28,7 +28,8 @@ function IdleEngine(canvas)
 	this.offset				= [ 350, 50 ];
 
 	/* Visual offset for rendering a character */
-	this.charOffset			= [ 0, 6 ];
+	// this.charOffset			= [ 0, 6 ];
+	this.charOffset			= [ 0, 0 ];
 
 	this.canvas.engine		= this;
 
@@ -208,9 +209,6 @@ IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
 
 IdleEngine.prototype.render = function render(map, characters)
 {
-	var l		= 0;	/* Left	*/
-	var t		= 0;	/* Top	*/
-
 	/*
 		Calculate the bottom center position of each character that is on the
 		screen and determine which tile the character is on.
@@ -249,57 +247,75 @@ IdleEngine.prototype.render = function render(map, characters)
 
 
 	for (var row = 0; row < map.length * 4; row++) {
+		var maxel = 0;
+
 		for (var x = 0, y = row; x <= row; y--, x++) {
 			var tile = this.getMapTile(map, x, y);
 
-			if (!tile) {
-				continue;
+			if (!tile) continue;
+			if (tile.elevation > maxel) {
+				maxel = tile.elevation;
 			}
+		}
 
-			/* Calculate isometric coords */
-			var iso = this.mapToIso(x, y);
+		for (var el = 0; el <= maxel; el += 0.5) {
+			for (var x = 0, y = row; x <= row; y--, x++) {
+				var tile = this.getMapTile(map, x, y);
 
-			if (tile.elevation > 0) {
-				this.ctx.drawImage(tile.elimg,
-					iso[0] + this.offset[0] - (tile.elimg.width / 2),
-					iso[1] + this.offset[1] - (this.tileSize[1] / 2) -
-						(tile.elevation * this.tileSize[1]));
-			}
+				if (!tile) continue;
+				if (tile.elevation != el) continue;
 
-			this.ctx.drawImage(tile.img,
-				iso[0] + this.offset[0] - (tile.img.width / 2),
-				iso[1] + this.offset[1] - tile.img.height -
-						(tile.elevation * this.tileSize[1]));
+				/* Calculate isometric coords */
+				var iso = this.mapToIso(x, y);
 
-			if (this.debug) {
-				this.outlineTile(false, iso[0],
-					iso[1] - (tile.elevation * this.tileSize[1]),
-					'rgba(0, 0, 0, 0.6)');
-			}
-
-			/* Are there any characters standing on this tile? */
-			for (var i = 0, npc; npc = characters[i]; i++) {
-				/* Get the tile he is really on for the sake of elevation */
-				tile = this.getMapTile(map, npc.reallyat[0], npc.reallyat[1]);
-
-				if (this.debug) {
-					if (x == npc.reallyat[0] && y == npc.reallyat[1]) {
-						this.outlineTile(true, iso[0],
-							iso[1] - (tile.elevation * this.tileSize[1]),
-							'rgba(255, 0, 0, 0.5)');
-					}
+				if (tile.elevation > 0) {
+					this.ctx.drawImage(tile.elimg,
+						iso[0] + this.offset[0] - (tile.elimg.width / 2),
+						iso[1] + this.offset[1] - (this.tileSize[1] / 2) -
+							(tile.elevation * this.tileSize[1]));
 				}
 
-				if (x == npc.renderat[0] && y == npc.renderat[1]) {
-					/* Bottom center position of the character */
-					var l = npc.x - (npc.img.width / 2);
-					var t = npc.y - (npc.img.height);
+				this.ctx.drawImage(tile.img,
+					iso[0] + this.offset[0] - (tile.img.width / 2),
+					iso[1] + this.offset[1] - tile.img.height -
+							(tile.elevation * this.tileSize[1]));
 
-					/* Offset the character by 2 pixels */
-					this.ctx.drawImage(npc.img,
-						l + this.offset[0],
-						t + this.offset[1] -
-								(tile.elevation * this.tileSize[1]));
+				if (this.debug) {
+					this.outlineTile(false, iso[0],
+						iso[1] - (tile.elevation * this.tileSize[1]),
+						'rgba(0, 0, 0, 0.6)');
+				}
+
+				/* Are there any characters standing on this tile? */
+				for (var i = 0, npc; npc = characters[i]; i++) {
+					/* Get the tile he is really on for the sake of elevation */
+					tile = this.getMapTile(map, npc.reallyat[0], npc.reallyat[1]);
+
+					if (this.debug) {
+						if (x == npc.reallyat[0] && y == npc.reallyat[1]) {
+							this.outlineTile(true, iso[0],
+								iso[1] - (tile.elevation * this.tileSize[1]),
+								'rgba(255, 0, 0, 0.5)');
+						}
+					}
+
+					if (x == npc.renderat[0] && y == npc.renderat[1]) {
+						if (this.debug) {
+							this.outlineTile(true, iso[0],
+								iso[1] - (tile.elevation * this.tileSize[1]),
+								'rgba(0, 0, 255, 0.3)');
+						}
+
+						/* Bottom center position of the character */
+						var l = npc.x - (npc.img.width / 2);
+						var t = npc.y - (npc.img.height);
+
+						/* Offset the character by 2 pixels */
+						this.ctx.drawImage(npc.img,
+							l + this.offset[0],
+							t + this.offset[1] -
+									(tile.elevation * this.tileSize[1]));
+					}
 				}
 			}
 		}
@@ -437,23 +453,23 @@ IdleEngine.prototype.canWalk = function canWalk(map, to, from)
 	m.push(this.isoToMap(to[0], to[1]));
 
 	if (to[1] < from[1]) {
-		m.push(this.isoToMap(to[0] - waist, to[1] - waist));
-		m.push(this.isoToMap(to[0] + waist, to[1] - waist));
+		m.push(this.isoToMap(to[0] - waist * 2, to[1] - waist));
+		m.push(this.isoToMap(to[0] + waist * 2, to[1] - waist));
 	}
 
 	if (to[1] > from[1]) {
-		m.push(this.isoToMap(to[0] - waist, to[1] + waist));
-		m.push(this.isoToMap(to[0] + waist, to[1] + waist));
+		m.push(this.isoToMap(to[0] - waist * 2, to[1] + waist));
+		m.push(this.isoToMap(to[0] + waist * 2, to[1] + waist));
 	}
 
 	if (to[0] < from[0]) {
-		m.push(this.isoToMap(to[0] - waist, to[1] - waist));
-		m.push(this.isoToMap(to[0] - waist, to[1] + waist));
+		m.push(this.isoToMap(to[0] - waist * 2, to[1] - waist));
+		m.push(this.isoToMap(to[0] - waist * 2, to[1] + waist));
 	}
 
 	if (to[0] > from[0]) {
-		m.push(this.isoToMap(to[0] + waist, to[1] - waist));
-		m.push(this.isoToMap(to[0] + waist, to[1] + waist));
+		m.push(this.isoToMap(to[0] + waist * 2, to[1] - waist));
+		m.push(this.isoToMap(to[0] + waist * 2, to[1] + waist));
 	}
 
 
