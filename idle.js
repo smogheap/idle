@@ -27,6 +27,9 @@ function IdleEngine(canvas)
 	/* Offset for rendering in the middle of the screen */
 	this.offset				= [ 350, 50 ];
 
+	/* Visual offset for rendering a character */
+	this.charOffset			= [ 0, 6 ];
+
 	this.canvas.engine		= this;
 
 	this.seed				= WRand.getSeed(NaN);
@@ -216,8 +219,11 @@ IdleEngine.prototype.render = function render(map, characters)
 		/*
 			Calculate the isometric coords of the character since the screen is
 			rendered that way.
+
 		*/
-		npc.mcoords = this.isoToMap(npc.x, npc.y);
+		npc.renderat	= this.isoToMap(npc.x + this.charOffset[0],
+								npc.y + this.charOffset[1]);
+		npc.reallyat	= this.isoToMap(npc.x, npc.y);
 	}
 
 	/* Set some clipping for the game area */
@@ -254,7 +260,6 @@ IdleEngine.prototype.render = function render(map, characters)
 			var iso = this.mapToIso(x, y);
 
 			if (tile.elevation > 0) {
-				// TODO	Draw the elevation image
 				this.ctx.drawImage(tile.elimg,
 					iso[0] + this.offset[0] - (tile.elimg.width / 2),
 					iso[1] + this.offset[1] - (this.tileSize[1] / 2) -
@@ -271,38 +276,29 @@ IdleEngine.prototype.render = function render(map, characters)
 					iso[1] - (tile.elevation * this.tileSize[1]),
 					'rgba(0, 0, 0, 0.6)');
 			}
-		}
-
-		/* Render any characters standing on this row */
-		for (var x = 0, y = row; x <= row; y--, x++) {
-			var tile = this.getMapTile(map, x, y);
-
-			if (!tile) {
-				continue;
-			}
 
 			/* Are there any characters standing on this tile? */
 			for (var i = 0, npc; npc = characters[i]; i++) {
-				if (x == npc.mcoords[0] && y == npc.mcoords[1]) {
-					/* Remember the last tile the character was on */
-					npc.tile = tile;
+				/* Get the tile he is really on for the sake of elevation */
+				tile = this.getMapTile(map, npc.reallyat[0], npc.reallyat[1]);
 
-					if (this.debug) {
-						var iso = this.mapToIso(x, y);
-
+				if (this.debug) {
+					if (x == npc.reallyat[0] && y == npc.reallyat[1]) {
 						this.outlineTile(true, iso[0],
 							iso[1] - (tile.elevation * this.tileSize[1]),
 							'rgba(255, 0, 0, 0.5)');
 					}
+				}
 
+				if (x == npc.renderat[0] && y == npc.renderat[1]) {
 					/* Bottom center position of the character */
 					var l = npc.x - (npc.img.width / 2);
 					var t = npc.y - (npc.img.height);
 
-					/* Offset the character by 4 pixels */
+					/* Offset the character by 2 pixels */
 					this.ctx.drawImage(npc.img,
 						l + this.offset[0],
-						t + this.offset[1] - 4 -
+						t + this.offset[1] -
 								(tile.elevation * this.tileSize[1]));
 				}
 			}
@@ -421,15 +417,11 @@ IdleEngine.prototype.getTimeStr = function getTimeStr(time)
 */
 IdleEngine.prototype.canWalk = function canWalk(map, to, from)
 {
-	var		waist	= 4;
+	var		waist	= 6;
 
 	if (this.debug) {
 		return(true);
 	}
-
-	/* Adjust for the offset that the character is rendered at */
-	to[1] -= 4;
-	from[1] -= 4;
 
 	/*
 		Build a list of coordinates to check
