@@ -16,6 +16,7 @@
 
 function IdleEngine(canvas)
 {
+	this.debug				= false;
 	this.canvas				= canvas;
 	this.ctx				= canvas.getContext('2d');
 
@@ -203,14 +204,16 @@ IdleEngine.prototype.render = function render(map, characters)
 				iso[0] + this.offset[0] - (tile.width / 2),
 				iso[1] + this.offset[1] - tile.height);
 
-			// DEBUG Draw a grid
-			this.outlineTile(false, iso[0], iso[1], 'rgba(0, 0, 0, 0.6)');
+			if (this.debug) {
+				this.outlineTile(false, iso[0], iso[1], 'rgba(0, 0, 0, 0.6)');
+			}
 
 			/* Are there any characters standing on this tile? */
 			for (var i = 0, npc; npc = characters[i]; i++) {
 				if (c == npc.iso[0] && r == npc.iso[1]) {
-					// DEBUG
-					this.outlineTile(true, iso[0], iso[1], 'rgba(255, 0, 0, 0.5)');
+					if (this.debug) {
+						this.outlineTile(true, iso[0], iso[1], 'rgba(255, 0, 0, 0.5)');
+					}
 
 					/* Bottom center position of the character */
 					var l = npc.x - (npc.tile.width / 2);
@@ -218,7 +221,7 @@ IdleEngine.prototype.render = function render(map, characters)
 
 					this.ctx.drawImage(npc.tile,
 						l + this.offset[0],
-						t + this.offset[1]);
+						t + this.offset[1] - 3);
 				}
 			}
 		}
@@ -307,6 +310,14 @@ IdleEngine.prototype.start = function start()
 			this.ctx.fillStyle = 'rgb(0, 0, 0)';
 			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+			this.ctx.font = '20pt Arial';
+			this.ctx.fillStyle = 'rgb(255, 255, 255)';
+			this.ctx.fillText('idle', 10, 30);
+
+			this.ctx.font = '10pt Arial';
+			this.ctx.fillStyle = 'rgb(255, 255, 255)';
+			this.ctx.fillText('Press tab to toggle grid', 10, 50);
+
 			/* Move idle based on keyboard input */
 			if (this.keys.left) {
 				this.characters[0].x -= speed;
@@ -355,11 +366,16 @@ window.addEventListener('keydown', function(e)
 	var c = document.getElementById('game');
 
 	switch (e.keyCode) {
-		case 37: c.engine.keys.left		= true; break;
-		case 38: c.engine.keys.up		= true; break;
-		case 39: c.engine.keys.right	= true; break;
-		case 40: c.engine.keys.down		= true; break;
+		case 37:	c.engine.keys.left	= true;				break;
+		case 38:	c.engine.keys.up	= true;				break;
+		case 39:	c.engine.keys.right	= true;				break;
+		case 40:	c.engine.keys.down	= true;				break;
+
+		/* Tab to toggle debug */
+		case 9:		c.engine.debug		= !c.engine.debug;	break;
 	}
+
+	e.preventDefault();
 }, false);
 
 window.addEventListener('keyup', function(e)
@@ -372,5 +388,7 @@ window.addEventListener('keyup', function(e)
 		case 39: c.engine.keys.right	= false; break;
 		case 40: c.engine.keys.down		= false; break;
 	}
+
+	e.preventDefault();
 }, false);
 
