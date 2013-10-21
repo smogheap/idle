@@ -315,6 +315,7 @@ IdleEngine.prototype.start = function start()
 				this.characters[0].x += speed;
 			}
 
+			/* Vertical speed is half horizontal due to the isometric display */
 			if (this.keys.up) {
 				this.characters[0].y -= speed / 2;
 			}
