@@ -30,7 +30,7 @@ function IdleEngine(canvas)
 	this.canvas.engine		= this;
 
 	this.seed				= WRand.getSeed(NaN);
-	this.time				= 0;
+	this.time				= 0.5;
 }
 
 // TODO	This should probably be loaded from a seperate JSON document, but I
@@ -181,8 +181,6 @@ IdleEngine.prototype.render = function render(map, characters)
 		screen and determine which tile the character is on.
 	*/
 	for (var i = 0, npc; npc = characters[i]; i++) {
-		npc.tile = this.getTile(npc.name, 'characters');
-
 		/*
 			Calculate the isometric coords of the character since the screen is
 			rendered that way.
@@ -336,7 +334,9 @@ IdleEngine.prototype.start = function start()
 	this.characters = [{
 		name:		"idle",
 		x:			25,
-		y:			150
+		y:			150,
+
+		tile:		this.getTile('idle-r', 'characters')
 	}];
 
 	this.keys = {};
@@ -366,9 +366,13 @@ IdleEngine.prototype.start = function start()
 			/* Move idle based on keyboard input */
 			if (this.keys.left) {
 				this.characters[0].x -= speed;
+
+				this.characters[0].tile = this.getTile('idle-l', 'characters');
 			}
 			if (this.keys.right) {
 				this.characters[0].x += speed;
+
+				this.characters[0].tile = this.getTile('idle-r', 'characters');
 			}
 
 			/* Vertical speed is half horizontal due to the isometric display */
