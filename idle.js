@@ -25,7 +25,7 @@ function IdleEngine(canvas)
 	this.tileSize			= [ 32, 16 ];
 
 	/* Offset for rendering in the middle of the screen */
-	this.offset				= [ 160, 55 ];
+	this.offset				= [ 160, 70 ];
 
 	this.canvas.engine		= this;
 
