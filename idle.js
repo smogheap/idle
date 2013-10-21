@@ -228,11 +228,6 @@ IdleEngine.prototype.render = function render(map, characters)
 
 	this.ctx.fillStyle = this.timeToColor(time);
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-	for (var i = 0, npc; npc = characters[i]; i++) {
-		this.ctx.fillStyle = 'rgba(255, 0, 0, 1.0)';
-		this.ctx.fillRect(npc.x - 1 + this.offset[0], npc.y - 1 + this.offset[1], 3, 3);
-	}
 };
 
 IdleEngine.prototype.timeColors = [
