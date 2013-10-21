@@ -189,6 +189,17 @@ IdleEngine.prototype.getMapTile = function getMapTile(map, x, y)
 	return(t);
 };
 
+IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
+{
+	if (y < 0 || y >= map.length || x < 0 || x >= map[y].length) {
+		return;
+	}
+
+	var old = map[y];
+
+	map[y] = old.substr(0, x) + c + old.substr(x + 1);
+};
+
 IdleEngine.prototype.render = function render(map, characters)
 {
 	var l		= 0;	/* Left	*/
@@ -584,4 +595,29 @@ window.addEventListener('keyup', function(e)
 
 	e.preventDefault();
 }, false);
+
+window.addEventListener('keypress', function(event)
+{
+	var c = document.getElementById('game');
+	var e = c.engine;
+	var s;
+
+	if (e.debug) {
+		try {
+			s = String.fromCharCode(event.which).trim();
+		} catch (e) {
+			return;
+		}
+
+		/* Get the tile the character is standing on */
+		var t	= e.tiles[s];
+
+		if (s) {
+			var m = e.isoToMap(e.characters[0].x, e.characters[0].y);
+
+			e.setMapTile(e.world.map, m[0], m[1], s);
+		}
+	}
+}, false);
+
 
