@@ -30,7 +30,7 @@ function IdleEngine(canvas)
 	this.canvas.engine		= this;
 
 	this.seed				= WRand.getSeed(NaN);
-	this.time				= this.seed;
+	this.time				= 0;
 }
 
 // TODO	This should probably be loaded from a seperate JSON document, but I
@@ -227,18 +227,21 @@ IdleEngine.prototype.render = function render(map, characters)
 		}
 	}
 
-	var time = ((++this.time) % 1000) / 1000;
-
-	this.ctx.fillStyle = this.timeToColor(time);
+	this.ctx.fillStyle = this.getTimeColor(this.time);
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 };
 
 IdleEngine.prototype.timeColors = [
 	[   0,   0,  20, 0.8 ],	/* Just after midnight	*/
-	[  20,   0,  10, 0.5 ],
-	[  80,   0,   0, 0.3 ],	/* Morning				*/
+	[   0,   0,  20, 0.8 ],
+	[   0,   0,  20, 0.8 ],
+	[  20,   0,  10, 0.8 ],
+	[  80,   0,   0, 0.5 ],	/* Morning				*/
+	[ 255, 255, 250, 0.0 ],
+	[ 255, 230, 230, 0.1 ], /* Noon					*/
 	[ 255, 255, 255, 0.0 ],
-	[ 255, 230, 230, 0.2 ], /* Noon					*/
+	[ 255, 255, 255, 0.0 ],
+	[ 255, 255, 255, 0.0 ],
 	[ 255, 255, 255, 0.0 ],
 	[ 180,  50,  80, 0.3 ],	/* Sunset				*/
 	[  40,   0,  20, 0.5 ],
@@ -249,7 +252,7 @@ IdleEngine.prototype.timeColors = [
 	Give a time of day between 0 (midnight) and 1 (midnight again) return a
 	color that is appropriate.
 */
-IdleEngine.prototype.timeToColor = function timeToColor(time)
+IdleEngine.prototype.getTimeColor = function getTimeColor(time)
 {
 	var t = (time * this.timeColors.length) % this.timeColors.length;
 	var w = t;
@@ -286,11 +289,49 @@ IdleEngine.prototype.timeToColor = function timeToColor(time)
 	return("rgba(" + r + "," + g + "," + b + "," + a + ")");
 };
 
+IdleEngine.prototype.getTimeStr = function getTimeStr(time)
+{
+	var H = 24 * this.time;
+	var h = Math.floor(H);
+	var m = Math.floor(60 * (H - h));
+	var pm = (h >= 12) ? true : false;
+
+	h = h % 12;
+
+	var str = '';
+
+	if (h == 0) {
+		str += 12;
+	} else {
+		str += h;
+	}
+	str += ':';
+
+	if (m < 10) {
+		str += '0';
+	}
+	str += m;
+
+	if (pm) {
+		str += 'pm';
+	} else {
+		str += 'am';
+	}
+
+	if (this.debug) {
+		str += ' (' + Math.floor(this.time * 100) + '%)';
+	}
+
+	return(str);
+};
+
 IdleEngine.prototype.start = function start()
 {
-	var speed	= 3;
-	var fps		= 30;
-	// var fps		= 1;
+	var speed			= 3;
+	var fps				= 30;
+
+	/* How many real life seconds should it take for a day to pass in game */
+	var SecondsPerDay	= 120;
 
 	this.characters = [{
 		name:		"idle",
@@ -305,6 +346,8 @@ IdleEngine.prototype.start = function start()
 	this.loadTiles(tiles, function() {
 		this.resize();
 		setInterval(function() {
+			this.time += 1 / (SecondsPerDay * fps);
+
 			this.ctx.save();
 
 			this.ctx.fillStyle = 'rgb(0, 0, 0)';
@@ -318,6 +361,7 @@ IdleEngine.prototype.start = function start()
 			this.ctx.fillStyle = 'rgb(255, 255, 255)';
 			this.ctx.fillText('Press tab to toggle grid', 10, 50);
 			this.ctx.fillText('arrows or wasd to move', 10, 70);
+			this.ctx.fillText(this.getTimeStr(), 620, 50);
 
 			/* Move idle based on keyboard input */
 			if (this.keys.left) {
