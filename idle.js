@@ -246,6 +246,15 @@ IdleEngine.prototype.render = function render(map, characters)
 					iso[1] - (tile.elevation * this.tileSize[1]),
 					'rgba(0, 0, 0, 0.6)');
 			}
+		}
+
+		/* Render any characters standing on this row */
+		for (var x = 0, y = row; x <= row; y--, x++) {
+			var tile = this.getMapTile(map, x, y);
+
+			if (!tile) {
+				continue;
+			}
 
 			/* Are there any characters standing on this tile? */
 			for (var i = 0, npc; npc = characters[i]; i++) {
@@ -254,6 +263,8 @@ IdleEngine.prototype.render = function render(map, characters)
 					npc.tile = tile;
 
 					if (this.debug) {
+						var iso = this.mapToIso(x, y);
+
 						this.outlineTile(true, iso[0],
 							iso[1] - (tile.elevation * this.tileSize[1]),
 							'rgba(255, 0, 0, 0.5)');
