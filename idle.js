@@ -204,7 +204,7 @@ IdleEngine.prototype.render = function render(map, characters)
 				iso[1] + this.offset[1] - tile.height);
 
 			// DEBUG Draw a grid
-			this.outlineTile(false, iso[0], iso[1], 'rgba(255, 255, 255, 0.8)');
+			this.outlineTile(false, iso[0], iso[1], 'rgba(0, 0, 0, 0.6)');
 
 			/* Are there any characters standing on this tile? */
 			for (var i = 0, npc; npc = characters[i]; i++) {
@@ -290,8 +290,7 @@ IdleEngine.prototype.timeToColor = function timeToColor(time)
 
 IdleEngine.prototype.start = function start()
 {
-	// var speed	= 3;
-	var speed	= 1;
+	var speed	= 3;
 	var fps		= 30;
 	// var fps		= 1;
 
@@ -309,7 +308,9 @@ IdleEngine.prototype.start = function start()
 		this.resize();
 		setInterval(function() {
 			this.ctx.save();
-			this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+			this.ctx.fillStyle = 'rgb(0, 0, 0)';
+			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
 			/* Move idle based on keyboard input */
 			if (this.keys.left) {
@@ -320,10 +321,10 @@ IdleEngine.prototype.start = function start()
 			}
 
 			if (this.keys.up) {
-				this.characters[0].y -= speed;
+				this.characters[0].y -= speed / 2;
 			}
 			if (this.keys.down) {
-				this.characters[0].y += speed;
+				this.characters[0].y += speed / 2;
 			}
 
 			this.render(this.world, this.characters);
