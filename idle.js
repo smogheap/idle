@@ -30,7 +30,10 @@ function IdleEngine(canvas)
 	this.canvas.engine		= this;
 
 	this.seed				= WRand.getSeed(NaN);
-	this.time				= 0.5;
+
+	/* Start at noon */
+	// this.time				= 0.5;
+	this.time				= 0.0;
 }
 
 // TODO	This should probably be loaded from a seperate JSON document, but I
@@ -225,8 +228,36 @@ IdleEngine.prototype.render = function render(map, characters)
 		}
 	}
 
+	/*
+		Draw over everything as a rather weak way of changing the time of day.
+		It isn't elegant, but it works reasonably well.
+
+		This mask assumes a 20x20 screen.
+	*/
+	this.ctx.save();
+	this.ctx.beginPath();
+
+	var x = this.offset[0];
+	var y = this.offset[1] - this.tileSize[1] / 2;
+
+	this.ctx.moveTo(x, y - 3 - (this.tileSize[1] * 3));
+	this.ctx.lineTo(x + (10 * this.tileSize[0]) + 3,
+					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 3));
+	this.ctx.lineTo(x + (10 * this.tileSize[0]) + 3,
+					y + (10 * this.tileSize[1]));
+	this.ctx.lineTo(x,
+					y + (20 * this.tileSize[1]) + 3);
+	this.ctx.lineTo(x - (10 * this.tileSize[0]) - 3,
+					y + (10 * this.tileSize[1]));
+	this.ctx.lineTo(x - (10 * this.tileSize[0]) - 3,
+					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 3));
+	this.ctx.lineTo(x, y - 3 - (this.tileSize[1] * 3));
+	this.ctx.clip();
+
 	this.ctx.fillStyle = this.getTimeColor(this.time);
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+	this.ctx.restore();
 };
 
 IdleEngine.prototype.timeColors = [
@@ -329,7 +360,8 @@ IdleEngine.prototype.start = function start()
 	var fps				= 30;
 
 	/* How many real life seconds should it take for a day to pass in game */
-	var SecondsPerDay	= 120;
+	// var SecondsPerDay	= 120;
+	var SecondsPerDay	= 30;
 
 	this.characters = [{
 		name:		"idle",
