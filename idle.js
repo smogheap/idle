@@ -24,7 +24,7 @@ function IdleEngine(canvas)
 	this.tileSize			= [ 32, 16 ];
 
 	/* Offset for rendering in the middle of the screen */
-	this.offset				= [ 300, 50 ];
+	this.offset				= [ 350, 50 ];
 
 	this.canvas.engine		= this;
 
@@ -101,39 +101,70 @@ IdleEngine.prototype.loadTiles = function loadTiles(names, cb)
 	}
 };
 
-/* Convert from isometric to cartesian */
-IdleEngine.prototype.isoToCart = function isoToCart(x, y)
+/*
+	Convert from isometric to map coords
+
+	Map is in a map position, isometric is in pixels.
+*/
+IdleEngine.prototype.isoToMap = function isoToMap(x, y)
 {
-	var tx = (2 * y + x) / 2;
-	var ty = (2 * y - x) / 2;
+	var w = this.tileSize[0] / 2;
+	var h = this.tileSize[1] / 2;
+
+	var tx = (x / w + (y / h)) / 2;
+	var ty = (y / h - (x / w)) / 2;
 
 	return([ Math.round(tx), Math.round(ty) ]);
 };
 
-/* Convert from cartesian to isometric */
-IdleEngine.prototype.cartToIso = function cartToIso(x, y)
+/*
+	Convert from map coords to isometric
+
+	Map is in a map position, isometric is in pixels.
+*/
+IdleEngine.prototype.mapToIso = function mapToIso(x, y)
 {
-	var tx	= x - y;
-	var ty	= (x + y) / 2;
+	var w = this.tileSize[0] / 2;
+	var h = this.tileSize[1] / 2;
+
+	var tx = (x - y) * w;
+	var ty = (x + y) * h;
+
+	/* Isometric position should be centered */
+	ty += h;
 
 	return([ Math.round(tx), Math.round(ty) ]);
 };
 
-IdleEngine.prototype.outlineTile = function outlineTile(x, y, color)
+IdleEngine.prototype.outlineTile = function outlineTile(full, x, y, color)
 {
 	this.ctx.save();
 
 	x += this.offset[0];
 	y += this.offset[1] - 1;
 
-	this.ctx.strokeStyle = color || 'rgba(255, 255, 255, 1.0)';
+	if (full) {
+		this.ctx.fillStyle		= color || 'rgba(255, 255, 255, 0.5)';
+	} else {
+		this.ctx.strokeStyle	= color || 'rgba(255, 255, 255, 1.0)';
+	}
 	this.ctx.beginPath();
-	this.ctx.moveTo(x, y);
-	this.ctx.lineTo(x - (this.tileSize[0] / 2), y - (this.tileSize[1] / 2));
-	this.ctx.lineTo(x, y - this.tileSize[1]);
+
+	if (full) {
+		this.ctx.moveTo(x, y);
+		this.ctx.lineTo(x - (this.tileSize[0] / 2), y - (this.tileSize[1] / 2));
+		this.ctx.lineTo(x, y - this.tileSize[1]);
+	} else {
+		this.ctx.moveTo(x, y - this.tileSize[1]);
+	}
 	this.ctx.lineTo(x + (this.tileSize[0] / 2), y - (this.tileSize[1] / 2));
 	this.ctx.lineTo(x, y);
-	this.ctx.stroke();
+
+	if (full) {
+		this.ctx.fill();
+	} else {
+		this.ctx.stroke();
+	}
 
 	this.ctx.restore();
 };
@@ -151,10 +182,11 @@ IdleEngine.prototype.render = function render(map, characters)
 	for (var i = 0, npc; npc = characters[i]; i++) {
 		npc.tile = this.getTile(npc.name, 'characters');
 
-		/* Position on the screen of the character */
-		npc.iso = this.isoToCart(
-			Math.round(npc.x / this.tileSize[1]),
-			Math.round(npc.y / this.tileSize[1]));
+		/*
+			Calculate the isometric coords of the character since the screen is
+			rendered that way.
+		*/
+		npc.iso = this.isoToMap(npc.x, npc.y);
 	}
 
 	for (var r = 0, row; row = map.map[r]; r++) {
@@ -162,32 +194,31 @@ IdleEngine.prototype.render = function render(map, characters)
 		row = row.replace(/\s/g, '0');
 
 		for (var c = 0, t; (t = row.charAt(c)) && t.length == 1; c++) {
-			var x = c * this.tileSize[1];
-			var y = r * this.tileSize[1];
 			var tile = this.getTile(map.tiles[t * 1]);
 
 			/* Calculate isometric coords */
-			var iso = this.cartToIso(x, y);
+			var iso = this.mapToIso(c, r);
 
 			this.ctx.drawImage(tile,
-				iso[0] - (tile.width / 2)	+ this.offset[0],
-				iso[1] - (tile.height)		+ this.offset[1]);
+				iso[0] + this.offset[0] - (tile.width / 2),
+				iso[1] + this.offset[1] - tile.height);
 
-			// this.outlineTile(iso[0], iso[1]);
+			// DEBUG Draw a grid
+			this.outlineTile(false, iso[0], iso[1], 'rgba(255, 255, 255, 0.8)');
 
 			/* Are there any characters standing on this tile? */
 			for (var i = 0, npc; npc = characters[i]; i++) {
 				if (c == npc.iso[0] && r == npc.iso[1]) {
+					// DEBUG
+					this.outlineTile(true, iso[0], iso[1], 'rgba(255, 0, 0, 0.5)');
+
 					/* Bottom center position of the character */
-					var l = npc.x - npc.tile.width / 2;
-					var t = npc.y - npc.tile.height;
+					var l = npc.x - (npc.tile.width / 2);
+					var t = npc.y - (npc.tile.height);
 
 					this.ctx.drawImage(npc.tile,
 						l + this.offset[0],
 						t + this.offset[1]);
-
-					// DEBUG
-					this.outlineTile(iso[0], iso[1], 'rgba(0, 0, 0, 1.0)');
 				}
 			}
 		}
@@ -259,14 +290,15 @@ IdleEngine.prototype.timeToColor = function timeToColor(time)
 
 IdleEngine.prototype.start = function start()
 {
-	var speed	= 3;
+	// var speed	= 3;
+	var speed	= 1;
 	var fps		= 30;
 	// var fps		= 1;
 
 	this.characters = [{
 		name:		"idle",
-		x:			10 * this.tileSize[0],
-		y:			10 * this.tileSize[1]
+		x:			25,
+		y:			150
 	}];
 
 	this.keys = {};
