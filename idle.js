@@ -334,11 +334,11 @@ IdleEngine.prototype.render = function render(map, characters)
 };
 
 IdleEngine.prototype.timeColors = [
-	[   0,   0,  20, 0.8 ],	/* Just after midnight	*/
-	[   0,   0,  20, 0.8 ],
-	[   0,   0,  20, 0.8 ],
-	[  20,   0,  10, 0.8 ],
-	[  80,   0,   0, 0.5 ],	/* Morning				*/
+	[   0,   0,  20, 0.7 ],	/* Just after midnight	*/
+	[  10,   0,  20, 0.6 ],
+	[  20,   0,  20, 0.5 ],
+	[  40,   0,  10, 0.4 ],
+	[  80,   0,   0, 0.3 ],	/* Morning				*/
 	[ 255, 255, 250, 0.0 ],
 	[ 255, 230, 230, 0.1 ], /* Noon					*/
 	[ 255, 255, 255, 0.0 ],
