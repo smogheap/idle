@@ -231,7 +231,9 @@ IdleEngine.prototype.render = function render(map, characters)
 						(tile.elevation * this.tileSize[1]));
 
 			if (this.debug) {
-				this.outlineTile(false, iso[0], iso[1], 'rgba(0, 0, 0, 0.6)');
+				this.outlineTile(false, iso[0],
+					iso[1] - (tile.elevation * this.tileSize[1]),
+					'rgba(0, 0, 0, 0.6)');
 			}
 
 			/* Are there any characters standing on this tile? */
@@ -241,7 +243,9 @@ IdleEngine.prototype.render = function render(map, characters)
 					npc.tile = tile;
 
 					if (this.debug) {
-						this.outlineTile(true, iso[0], iso[1], 'rgba(255, 0, 0, 0.5)');
+						this.outlineTile(true, iso[0],
+							iso[1] - (tile.elevation * this.tileSize[1]),
+							'rgba(255, 0, 0, 0.5)');
 					}
 
 					/* Bottom center position of the character */
