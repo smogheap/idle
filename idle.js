@@ -20,7 +20,7 @@ function IdleEngine(canvas)
 	this.canvas				= canvas;
 	this.ctx				= canvas.getContext('2d');
 
-	this.tiles				= {};
+	this.imgcache			= {};
 
 	this.tileSize			= [ 32, 16 ];
 
@@ -32,70 +32,68 @@ function IdleEngine(canvas)
 	this.seed				= WRand.getSeed(NaN);
 
 	/* Start at noon */
-	// this.time				= 0.5;
-	this.time				= 0.0;
+	this.time				= 0.5;
 }
 
-// TODO	This should probably be loaded from a seperate JSON document, but I
-//		don't feel like writing that code yet.
-//
-//		For now the map is just an array of strings, with the tile index. This
-//		will obviously need to be extended...
-IdleEngine.prototype.world = {
-	"tiles": [
-		"grass",		// 0
-		"fence-ne",		// 1
-		"fence-nw",		// 2
-		"hole",			// 3
-		"puddle"		// 4
-	],
+IdleEngine.prototype.tiles = {
+	" ": { name: "grass"													},
+	".": { name: "grass",		elevation: 0.5, elname: "elevation-rock"	},
+	"_": { name: "grass",		elevation: 1.0, elname: "elevation-soil"	},
+	"=": { name: "grass",		elevation: 2.0, elname: "elevation-rock"	},
+	":": { name: "grass",		elevation: 1.5, elname: "elevation-soil"	},
+	"o": { name: "puddle"													},
+	"O": { name: "hole"														},
+	"-": { name: "fence-ne",	solid: true									},
+	"|": { name: "fence-nw",	solid: true									}
+};
 
+IdleEngine.prototype.world = {
 	"elevations": [
 		"elevation"
 	],
 
 	"map": [
-		"                    ",
-		"           2111112  ",
-		"           2     2  ",
-		"           2  3  2  ",
-		"           2  44 2  ",
-		"           2     2  ",
-		"           2     2  ",
-		"      4     11111   ",
-		"                    ",
-		"                    ",
-		"          4         ",
+		"=======_=           ",
+		"_==::      |-----|  ",
+		"  __.      |     |  ",
+		"  .        |  O  |  ",
+		"           |  oo |  ",
+		"  =        |     |  ",
+		"  =        |     |  ",
+		"      o     -----   ",
 		"                    ",
 		"                    ",
+		"          o         ",
 		"                    ",
-		"        4           ",
 		"                    ",
-		"11111111111112      ",
-		"             2      ",
-		"             2      ",
-		"             2      "
+		"                    ",
+		"        o           ",
+		"                    ",
+		"-------------|      ",
+		"             |      ",
+		"   OOO       |      ",
+		"             |      "
 	]
 };
 
-IdleEngine.prototype.getTile = function getTile(name, type)
+IdleEngine.prototype.getImage = function getImage(name, type)
 {
 	type = type || 'tiles';
 
-	if (!this.tiles[name]) {
-		this.tiles[name] = new Image();
-		this.tiles[name].src = type + '/' + name + '.png';
+	if (!this.imgcache[name]) {
+		this.imgcache[name] = new Image();
+		this.imgcache[name].src = type + '/' + name + '.png';
 	}
 
-	return(this.tiles[name]);
+	return(this.imgcache[name]);
 };
 
-IdleEngine.prototype.loadTiles = function loadTiles(names, cb)
+IdleEngine.prototype.loadImages = function loadImages(names, cb)
 {
 	var loaded	= 0;
 
 	for (var i = 0, n; n = names[i]; i++) {
-		var tile = this.getTile(n);
+		var tile = this.getImage(n);
 
 		tile.onload = function() {
 			if (++loaded == names.length) {
@@ -173,11 +171,32 @@ IdleEngine.prototype.outlineTile = function outlineTile(full, x, y, color)
 	this.ctx.restore();
 };
 
+IdleEngine.prototype.getMapTile = function getMapTile(map, x, y)
+{
+	if (y < 0 || y >= map.length || x < 0 || x >= map[y].length) {
+		return(null);
+	}
+
+	var c = map[y].charAt(x);
+	var t = this.tiles[c];
+
+	/* Main image */
+	if (t.name && !t.img) {
+		t.img = this.getImage(t.name);
+	}
+
+	/* Elevation image */
+	if (t.elname && !t.elimg) {
+		t.elimg = this.getImage(t.elname);
+	}
+
+	return(t);
+};
+
 IdleEngine.prototype.render = function render(map, characters)
 {
 	var l		= 0;	/* Left	*/
 	var t		= 0;	/* Top	*/
-	var eltile	= this.getTile('elevation');
 
 	/*
 		Calculate the bottom center position of each character that is on the
@@ -188,22 +207,28 @@ IdleEngine.prototype.render = function render(map, characters)
 			Calculate the isometric coords of the character since the screen is
 			rendered that way.
 		*/
-		npc.iso = this.isoToMap(npc.x, npc.y);
+		npc.mcoords = this.isoToMap(npc.x, npc.y);
 	}
 
-	for (var r = 0, row; row = map.map[r]; r++) {
-		/* Strip whitespace */
-		row = row.replace(/\s/g, '0');
-
-		for (var c = 0, t; (t = row.charAt(c)) && t.length == 1; c++) {
-			var tile = this.getTile(map.tiles[t * 1]);
+	for (var y = 0; y < map.length; y++) {
+		for (x = 0; x < map[y].length; x++) {
+			var tile = this.getMapTile(map, x, y);
 
 			/* Calculate isometric coords */
-			var iso = this.mapToIso(c, r);
+			var iso = this.mapToIso(x, y);
 
-			this.ctx.drawImage(tile,
-				iso[0] + this.offset[0] - (tile.width / 2),
-				iso[1] + this.offset[1] - tile.height);
+			if (tile.elevation > 0) {
+				// TODO	Draw the elevation image
+				this.ctx.drawImage(tile.elimg,
+					iso[0] + this.offset[0] - (tile.elimg.width / 2),
+					iso[1] + this.offset[1] - (this.tileSize[1] / 2) -
+						(tile.elevation * this.tileSize[1]));
+			}
+
+			this.ctx.drawImage(tile.img,
+				iso[0] + this.offset[0] - (tile.img.width / 2),
+				iso[1] + this.offset[1] - tile.img.height -
+						(tile.elevation * this.tileSize[1]));
 
 			if (this.debug) {
 				this.outlineTile(false, iso[0], iso[1], 'rgba(0, 0, 0, 0.6)');
@@ -211,18 +236,22 @@ IdleEngine.prototype.render = function render(map, characters)
 
 			/* Are there any characters standing on this tile? */
 			for (var i = 0, npc; npc = characters[i]; i++) {
-				if (c == npc.iso[0] && r == npc.iso[1]) {
+				if (x == npc.mcoords[0] && y == npc.mcoords[1]) {
+					/* Remember the last tile the character was on */
+					npc.tile = tile;
+
 					if (this.debug) {
 						this.outlineTile(true, iso[0], iso[1], 'rgba(255, 0, 0, 0.5)');
 					}
 
 					/* Bottom center position of the character */
-					var l = npc.x - (npc.tile.width / 2);
-					var t = npc.y - (npc.tile.height);
+					var l = npc.x - (npc.img.width / 2);
+					var t = npc.y - (npc.img.height);
 
-					this.ctx.drawImage(npc.tile,
+					this.ctx.drawImage(npc.img,
 						l + this.offset[0],
-						t + this.offset[1] - 3);
+						t + this.offset[1] -
+								(tile.elevation * this.tileSize[1]));
 				}
 			}
 		}
@@ -240,9 +269,9 @@ IdleEngine.prototype.render = function render(map, characters)
 	var x = this.offset[0];
 	var y = this.offset[1] - this.tileSize[1] / 2;
 
-	this.ctx.moveTo(x, y - 3 - (this.tileSize[1] * 3));
+	this.ctx.moveTo(x, y - 3 - (this.tileSize[1] * 4));
 	this.ctx.lineTo(x + (10 * this.tileSize[0]) + 3,
-					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 3));
+					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 4));
 	this.ctx.lineTo(x + (10 * this.tileSize[0]) + 3,
 					y + (10 * this.tileSize[1]));
 	this.ctx.lineTo(x,
@@ -250,8 +279,8 @@ IdleEngine.prototype.render = function render(map, characters)
 	this.ctx.lineTo(x - (10 * this.tileSize[0]) - 3,
 					y + (10 * this.tileSize[1]));
 	this.ctx.lineTo(x - (10 * this.tileSize[0]) - 3,
-					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 3));
-	this.ctx.lineTo(x, y - 3 - (this.tileSize[1] * 3));
+					y + (10 * this.tileSize[1]) - (this.tileSize[1] * 4));
+	this.ctx.lineTo(x, y - 3 - (this.tileSize[1] * 4));
 	this.ctx.clip();
 
 	this.ctx.fillStyle = this.getTimeColor(this.time);
@@ -368,14 +397,32 @@ IdleEngine.prototype.start = function start()
 		x:			25,
 		y:			150,
 
-		tile:		this.getTile('idle-r', 'characters')
+		img:		this.getImage('idle-r', 'characters')
 	}];
 
 	this.keys = {};
 
-	var tiles = this.world.tiles.concat(this.world.elevations);
+	/* Build a list of tiles to load */
+	var tiles = [];
+	for (var i = 0, k; k = Object.keys(this.tiles)[i]; i++) {
+		var t = this.tiles[k];
 
-	this.loadTiles(tiles, function() {
+		if (isNaN(t.elevation)) {
+			t.elevation = 0;
+		}
+
+		/* Normal tile image */
+		if (t.name && -1 == tiles.indexOf(t.name)) {
+			tiles.push(t.name);
+		}
+
+		/* Elevation image */
+		if (t.elname && -1 == tiles.indexOf(t.elname)) {
+			tiles.push(t.elname);
+		}
+	}
+
+	this.loadImages(tiles, function() {
 		this.resize();
 		setInterval(function() {
 			this.time += 1 / (SecondsPerDay * fps);
@@ -386,26 +433,60 @@ IdleEngine.prototype.start = function start()
 			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
 			/* Move idle based on keyboard input */
-			if (this.keys.left) {
-				this.characters[0].x -= speed;
+			if (this.keys.left || this.keys.right || this.keys.up || this.keys.down) {
+				var x	= this.characters[0].x;
+				var y	= this.characters[0].y;
 
-				this.characters[0].tile = this.getTile('idle-l', 'characters');
-			}
-			if (this.keys.right) {
-				this.characters[0].x += speed;
+				if (this.keys.left) {
+					x -= speed;
+					this.characters[0].img = this.getImage('idle-l', 'characters');
+				}
+				if (this.keys.right) {
+					x += speed;
 
-				this.characters[0].tile = this.getTile('idle-r', 'characters');
+					this.characters[0].img = this.getImage('idle-r', 'characters');
+				}
+
+				/* Vertical speed is half horizontal due to the isometric display */
+				if (this.keys.up) {
+					y -= speed / 2;
+				}
+				if (this.keys.down) {
+					y += speed / 2;
+				}
+
+				var m	= this.isoToMap(x, y);
+				var t	= this.getMapTile(this.world.map, m[0], m[1]);
+				var w	= this.characters[0].tile;
+
+				while (w && t) {
+					/* Is idle allowed to move there? */
+					if (t.solid) {
+						/* It is something solid, like a fence */
+						break;
+					}
+
+					if (t.elevation - w.elevation > 0.5) {
+						/* He can't climb that high */
+						break;
+					}
+
+					if (w.elevation - t.elevation > 1.0) {
+						/*
+							If we let him fall from that height then we'll have
+							to implement a health meter, and let him die!.
+						*/
+						break;
+					}
+
+					/* Yup, all good */
+					this.characters[0].x = x;
+					this.characters[0].y = y;
+					break;
+				}
 			}
 
-			/* Vertical speed is half horizontal due to the isometric display */
-			if (this.keys.up) {
-				this.characters[0].y -= speed / 2;
-			}
-			if (this.keys.down) {
-				this.characters[0].y += speed / 2;
-			}
-
-			this.render(this.world, this.characters);
+			this.render(this.world.map, this.characters);
 
 			this.ctx.font = '20pt Arial';
 			this.ctx.fillStyle = 'rgb(255, 255, 255)';
