@@ -210,9 +210,13 @@ IdleEngine.prototype.render = function render(map, characters)
 		npc.mcoords = this.isoToMap(npc.x, npc.y);
 	}
 
-	for (var y = 0; y < map.length; y++) {
-		for (x = 0; x < map[y].length; x++) {
+	for (var row = 0; row < map.length * 4; row++) {
+		for (var x = 0, y = row; x <= row; y--, x++) {
 			var tile = this.getMapTile(map, x, y);
+
+			if (!tile) {
+				continue;
+			}
 
 			/* Calculate isometric coords */
 			var iso = this.mapToIso(x, y);
