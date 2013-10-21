@@ -48,10 +48,6 @@ IdleEngine.prototype.tiles = {
 };
 
 IdleEngine.prototype.world = {
-	"elevations": [
-		"elevation"
-	],
-
 	"map": [
 		"=======_=           ",
 		"_==::      |-----|  ",
