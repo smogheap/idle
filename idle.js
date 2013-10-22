@@ -93,7 +93,7 @@ IdleEngine.prototype.tiles = {
 
 IdleEngine.prototype.world = {
 	/* A map of the tiles on the ground */
-	"ground": [
+	ground: [
 		"# ### ##__ ",
 		" ####%%    ",
 		"  # #      ",
@@ -108,7 +108,7 @@ IdleEngine.prototype.world = {
 	],
 
 	/* An elevation map, default is 5. Values are in hex */
-	"elevation": [
+	elevation: [
 		"acbaa 9876 ",
 		" 9ab999    ",
 		"  8 6      ",
@@ -123,7 +123,7 @@ IdleEngine.prototype.world = {
 	],
 
 	/* A map of any props */
-	"props": [
+	props: [
 		"           ",
 		"           ",
 		"           ",
@@ -836,7 +836,16 @@ window.addEventListener('keypress', function(event)
 		if (s) {
 			var m = e.isoToMap(e.characters[0].x, e.characters[0].y);
 
-			e.setMapTile(e.world, m[0], m[1], s);
+			if (s == ' ' && event.shiftKey) {
+				/* Reset the world when shift+space is pressed */
+				for (y = 0; y < e.world.ground.length; y++) {
+					for (x = 0; x < e.world.ground[y].length; x++) {
+						e.setMapTile(e.world, x, y, ' ');
+					}
+				}
+			} else {
+				e.setMapTile(e.world, m[0], m[1], s);
+			}
 		}
 	}
 }, false);
