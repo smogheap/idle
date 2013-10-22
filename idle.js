@@ -74,7 +74,7 @@ IdleEngine.prototype.world = {
 		"   #       ",
 		"  #        ",
 		"  #  ##  # ",
-		" ##o#  ####",
+		" ## #  ####",
 		"        #  "
 	],
 
@@ -88,9 +88,9 @@ IdleEngine.prototype.world = {
 		"     877   ",
 		"       766 ",
 		"           ",
-		"           ",
-		"           ",
-		"           "
+		"   0000 0  ",
+		"  4        ",
+		" 434       "
 	],
 
 	/* A map of any props */
@@ -104,8 +104,8 @@ IdleEngine.prototype.world = {
 		"       |   ",
 		"        ---",
 		"------     ",
-		"      |    ",
-		"      |    "
+		"           ",
+		"           "
 	]
 };
 
@@ -293,11 +293,11 @@ IdleEngine.prototype.render = function render(map, characters)
 	this.ctx.lineTo(x + (w * this.tileSize[0]) + 3,
 					y + (w * this.tileSize[1]) - (this.tileSize[1] * 4));
 	this.ctx.lineTo(x + (w * this.tileSize[0]) + 3,
-					y + (w * this.tileSize[1]) - 1);
+					y + (w * this.tileSize[1]) + (this.tileSize[1] * 1));
 	this.ctx.lineTo(x,
-					y + (w * 2 * this.tileSize[1]) + 3 - 2);
+					y + (w * 2 * this.tileSize[1]) + 3 + (this.tileSize[1] * 1));
 	this.ctx.lineTo(x - (w * this.tileSize[0]) - 3,
-					y + (w * this.tileSize[1]) - 1);
+					y + (w * this.tileSize[1]) + (this.tileSize[1] * 1));
 	this.ctx.lineTo(x - (w * this.tileSize[0]) - 3,
 					y + (w * this.tileSize[1]) - (this.tileSize[1] * 4));
 	this.ctx.lineTo(x, y - 3 - (this.tileSize[1] * 4));
