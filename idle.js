@@ -464,22 +464,17 @@ IdleEngine.prototype.inputLoop = function inputLoop(time)
 			idle.destination[1] - idle.y
 		];
 
-		/*
-			Limit the movement to the allowed speed
-
-			He should be limited to speed/1 for vertical movement, but it looks
-			more natural if he isn't.
-		*/
+		/* Limit the movement to the allowed speed */
 		if (diff[0] > speed) {
 			diff[0] = speed;
 		} else if (diff[0] < -speed) {
 			diff[0] = -speed;
 		}
 
-		if (diff[1] > speed) {
-			diff[1] = speed;
-		} else if (diff[1] < -speed) {
-			diff[1] = -speed;
+		if (diff[1] > (speed / 2)) {
+			diff[1] = (speed / 2);
+		} else if (diff[1] < -(speed / 2)) {
+			diff[1] = -(speed / 2);
 		}
 
 		idle.x += diff[0];
