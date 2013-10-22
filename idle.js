@@ -285,8 +285,6 @@ IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
 {
 	var d = 1;
 
-	console.log('Set tile: ' + c);
-
 	if (y < 0 || y >= map.length || x < 0 || x >= map.ground[y].length) {
 		return;
 	}
@@ -758,11 +756,11 @@ window.addEventListener('resize', function()
 	c.engine.resize();
 }, false);
 
-window.addEventListener('keydown', function(e)
+window.addEventListener('keydown', function(event)
 {
 	var c = document.getElementById('game');
 
-	switch (e.keyCode) {
+	switch (event.keyCode) {
 		case 65:	// a, h or left
 		case 72:
 		case 37:	c.engine.keys.left	= true; break;
@@ -780,19 +778,25 @@ window.addEventListener('keydown', function(e)
 		case 40:	c.engine.keys.down	= true; break;
 
 		/* Tab to toggle debug */
-		case 9:		c.engine.debug = !c.engine.debug; break;
+		case 9:
+			if (c.engine.debug) {
+				console.log(JSON.stringify(c.engine.world));
+			}
+
+			c.engine.debug = !c.engine.debug;
+			break;
 
 		default:	return;
 	}
 
-	e.preventDefault();
+	event.preventDefault();
 }, false);
 
-window.addEventListener('keyup', function(e)
+window.addEventListener('keyup', function(event)
 {
 	var c = document.getElementById('game');
 
-	switch (e.keyCode) {
+	switch (event.keyCode) {
 		case 65:	// a, h or left
 		case 72:
 		case 37:	c.engine.keys.left	= false; break;
@@ -812,7 +816,7 @@ window.addEventListener('keyup', function(e)
 		default:	return;
 	}
 
-	e.preventDefault();
+	event.preventDefault();
 }, false);
 
 window.addEventListener('keypress', function(event)
