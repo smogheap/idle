@@ -557,7 +557,9 @@ IdleEngine.prototype.render = function render(time)
 	this.ctx.restore();
 
 	/* Draw a scaled image to our display */
-	this.display.ctx.drawImage(this.canvas, 0, 0,
+	this.display.ctx.drawImage(this.canvas,
+		(this.display.canvas.width / 2) - ((this.width * this.scale) / 2),
+		(this.display.canvas.height / 2) - ((this.height * this.scale) / 2),
 		this.width * this.scale, this.height * this.scale);
 };
 
