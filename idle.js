@@ -451,50 +451,73 @@ IdleEngine.prototype.inputLoop = function inputLoop(time)
 	/* How many real life seconds should it take for a day to pass in game */
 	var SecondsPerDay	= 30;
 	var speed			= 2;
+	var idle			= this.characters[0];
 
 	/* Request next call for the input loop */
 	window.setTimeout(this.inputLoop.bind(this), 33);
 
 	this.time += 1 / (SecondsPerDay * 30);
 
-	if (this.characters[0].ignoreTime > 0) {
-		/*
-			Something happened to the character that should cause input to be
-			ignored for a time period. Assuming that this loop is actually
-			running 30 times a second, reduce the time by that amount.
-		*/
-		this.characters[0].ignoreTime -= 33;
+	if (idle.destination) {
+		var diff = [
+			idle.destination[0] - idle.x,
+			idle.destination[1] - idle.y
+		];
 
+		/*
+			Limit the movement to the allowed speed
+
+			He should be limited to speed/1 for vertical movement, but it looks
+			more natural if he isn't.
+		*/
+		if (diff[0] > speed) {
+			diff[0] = speed;
+		} else if (diff[0] < -speed) {
+			diff[0] = -speed;
+		}
+
+		if (diff[1] > speed) {
+			diff[1] = speed;
+		} else if (diff[1] < -speed) {
+			diff[1] = -speed;
+		}
+
+		idle.x += diff[0];
+		idle.y += diff[1];
+
+		if (idle.x == idle.destination[0] &&
+			idle.y == idle.destination[1]
+		) {
+			delete idle.destination;
+		}
 		return;
-	} else {
-		this.characters[0].ignoreTime = 0;
 	}
 
 	/* Move idle based on keyboard input */
 	if (this.keys.left || this.keys.right || this.keys.up || this.keys.down) {
-		var x	= this.characters[0].x;
-		var y	= this.characters[0].y;
+		var x	= idle.x;
+		var y	= idle.y;
 
 		if (this.keys.left) {
 			if (this.keys.up) {
-				this.characters[0].img = this.getImage('idle-stand-northwest');
+				idle.img = this.getImage('idle-stand-northwest');
 			} else if (this.keys.down) {
-				this.characters[0].img = this.getImage('idle-stand-southwest');
+				idle.img = this.getImage('idle-stand-southwest');
 			} else {
-				this.characters[0].img = this.getImage('idle-stand-west');
+				idle.img = this.getImage('idle-stand-west');
 			}
 		} else if (this.keys.right) {
 			if (this.keys.up) {
-				this.characters[0].img = this.getImage('idle-stand-northeast');
+				idle.img = this.getImage('idle-stand-northeast');
 			} else if (this.keys.down) {
-				this.characters[0].img = this.getImage('idle-stand-southeast');
+				idle.img = this.getImage('idle-stand-southeast');
 			} else {
-				this.characters[0].img = this.getImage('idle-stand-east');
+				idle.img = this.getImage('idle-stand-east');
 			}
 		} else if (this.keys.up) {
-			this.characters[0].img = this.getImage('idle-stand-north');
+			idle.img = this.getImage('idle-stand-north');
 		} else if (this.keys.down) {
-			this.characters[0].img = this.getImage('idle-stand-south');
+			idle.img = this.getImage('idle-stand-south');
 		}
 
 		if (this.keys.left) {
@@ -514,10 +537,10 @@ IdleEngine.prototype.inputLoop = function inputLoop(time)
 
 		var to;
 
-		if ((to = this.walkTo(this.characters[0], this.getMap(), [ x, y ]))) {
+		if ((to = this.walkTo(idle, this.getMap(), [ x, y ]))) {
 			/* Yup, all good */
-			this.characters[0].x = to[0];
-			this.characters[0].y = to[1];
+			idle.x = to[0];
+			idle.y = to[1];
 		}
 	}
 };
@@ -734,22 +757,13 @@ IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
 			/* Move him to the center of the correct tile on the new screen */
 			to = this.mapToIso(toM[0], toM[1]);
 			to[1] -= this.tileSize[1] / 2;
-		}
-
-		if (Math.abs(toT.elevation - fromT.elevation) > 1) {
+		} else if (toT.elevation != fromT.elevation) {
 			/*
-				Center him on the new tile to ensure that he isn't standing to
-				close to an edge after an elevation change.
+				Make him move to the center of the tile to avoid standing too
+				close to the edge after passing from one tile to another.
 			*/
-			to = this.mapToIso(toM[0], toM[1]);
-			to[1] -= this.tileSize[1] / 2;
-
-			/*
-				Ignore input for a short period to account for jumping to the
-				center of a tile, and to make it appear that the jump stunned
-				him a bit..
-			*/
-			npc.ignoreTime = 33 * 8;
+			npc.destination = this.mapToIso(toM[0], toM[1]);
+			npc.destination[1] -= this.tileSize[1] / 2;
 		}
 	}
 
