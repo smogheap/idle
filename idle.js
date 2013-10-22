@@ -449,14 +449,13 @@ IdleEngine.prototype.getTimeColor = function getTimeColor(time)
 
 IdleEngine.prototype.getTimeStr = function getTimeStr(time)
 {
-	var H = 24 * this.time;
+	var H = (24 * (time || this.time)) % 24;
 	var h = Math.floor(H);
 	var m = Math.floor(60 * (H - h));
 	var pm = (h >= 12) ? true : false;
+	var str = '';
 
 	h = h % 12;
-
-	var str = '';
 
 	if (h == 0) {
 		str += 12;
