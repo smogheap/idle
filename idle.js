@@ -55,17 +55,6 @@ function IdleEngine(canvas)
 	/* Start at noon */
 	this.time				= 0.5;
 
-	window.requestAnimFrame = (function() {
-		return (
-			window.requestAnimationFrame       ||
-			window.webkitRequestAnimationFrame ||
-			window.mozRequestAnimationFrame    ||
-			function (callback) {
-				window.setTimeout(callback, 1000 / 60);
-			}
-		);
-	})();
-
 	this.start();
 }
 
@@ -464,32 +453,16 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 	this.ctx.restore();
 };
 
-IdleEngine.prototype.render = function render(time)
+IdleEngine.prototype.inputLoop = function inputLoop(time)
 {
-	var speed			= 2;
-
-	/* Request the next animation frame */
-	requestAnimFrame(this.render.bind(this));
-
 	/* How many real life seconds should it take for a day to pass in game */
 	var SecondsPerDay	= 30;
+	var speed			= 2;
 
-	/*
-		Limit input handling to 30fps;
-	*/
-	if (isNaN(this.lastInputFrame) || time - this.lastInputFrame > 33) {
-		this.lastInputFrame = time;
+	/* Request next call for the input loop */
+	window.setTimeout(this.inputLoop.bind(this), 33);
 
-		this.time += 1 / (SecondsPerDay * 30);
-	} else {
-		/* Don't move Idle until the next frame */
-		speed = 0;
-	}
-
-	this.ctx.save();
-
-	this.ctx.fillStyle = 'rgb(0, 0, 0)';
-	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+	this.time += 1 / (SecondsPerDay * 30);
 
 	/* Move idle based on keyboard input */
 	if (this.keys.left || this.keys.right || this.keys.up || this.keys.down) {
@@ -541,6 +514,17 @@ IdleEngine.prototype.render = function render(time)
 			this.characters[0].y = y;
 		}
 	}
+};
+
+IdleEngine.prototype.renderLoop = function renderLoop(time)
+{
+
+	/* Request the next animation frame */
+	requestAnimationFrame(this.renderLoop.bind(this));
+	this.ctx.save();
+
+	this.ctx.fillStyle = 'rgb(0, 0, 0)';
+	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
 	this.renderMap(this.world, this.characters);
 
@@ -737,7 +721,8 @@ IdleEngine.prototype.start = function start()
 
 	this.loadImages(images, function() {
 		this.resize();
-		this.render();
+		this.renderLoop();
+		this.inputLoop();
 	}.bind(this));
 };
 
@@ -877,4 +862,37 @@ window.addEventListener('keypress', function(event)
 	}
 }, false);
 
+(function() {
+    var lastTime	= 0;
+    var vendors		= ['webkit', 'moz'];
+
+    for (var x = 0, vendor; (vendor = vendors[x]) && !window.requestAnimationFrame; x++) {
+        window.requestAnimationFrame =
+				window[vendor + 'RequestAnimationFrame'];
+
+        window.cancelAnimationFrame =
+				window[vendor + 'CancelAnimationFrame'] ||
+				window[vendor + 'CancelRequestAnimationFrame'];
+    }
+
+    if (!window.requestAnimationFrame) {
+        window.requestAnimationFrame = function(callback, element) {
+            var currTime	= new Date().getTime();
+            var timeToCall	= Math.max(0, 16 - (currTime - lastTime));
+            var id			= window.setTimeout(function()
+				{
+					callback(currTime + timeToCall);
+				}, timeToCall);
+
+            lastTime = currTime + timeToCall;
+            return id;
+        };
+	}
+
+    if (!window.cancelAnimationFrame) {
+        window.cancelAnimationFrame = function(id) {
+            clearTimeout(id);
+        };
+	}
+}());
 
