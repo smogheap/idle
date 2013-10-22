@@ -264,7 +264,7 @@ IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
 	map[y] = old.substr(0, x) + c + old.substr(x + 1);
 };
 
-IdleEngine.prototype.render = function render(map, characters)
+IdleEngine.prototype.renderMap = function renderMap(map, characters)
 {
 	/* Ground level is at an elevation of 5 */
 	var ground	= 5;
@@ -387,6 +387,103 @@ IdleEngine.prototype.render = function render(map, characters)
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
 	this.ctx.restore();
+};
+
+IdleEngine.prototype.render = function render(time)
+{
+	var speed			= 2;
+
+	/* Request the next animation frame */
+	requestAnimFrame(this.render.bind(this));
+
+	/* How many real life seconds should it take for a day to pass in game */
+	var SecondsPerDay	= 30;
+
+	/*
+		Limit input handling to 30fps;
+	*/
+	if (isNaN(this.lastInputFrame) || time - this.lastInputFrame > 33) {
+		this.lastInputFrame = time;
+
+		this.time += 1 / (SecondsPerDay * 30);
+	} else {
+		/* Don't move Idle until the next frame */
+		speed = 0;
+	}
+
+	this.ctx.save();
+
+	this.ctx.fillStyle = 'rgb(0, 0, 0)';
+	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+	/* Move idle based on keyboard input */
+	if (this.keys.left || this.keys.right || this.keys.up || this.keys.down) {
+		var x	= this.characters[0].x;
+		var y	= this.characters[0].y;
+
+		if (this.keys.left) {
+			if (this.keys.up) {
+				this.characters[0].img = this.getImage('idle-stand-northwest', 'characters');
+			} else if (this.keys.down) {
+				this.characters[0].img = this.getImage('idle-stand-southwest', 'characters');
+			} else {
+				this.characters[0].img = this.getImage('idle-stand-west', 'characters');
+			}
+		} else if (this.keys.right) {
+			if (this.keys.up) {
+				this.characters[0].img = this.getImage('idle-stand-northeast', 'characters');
+			} else if (this.keys.down) {
+				this.characters[0].img = this.getImage('idle-stand-southeast', 'characters');
+			} else {
+				this.characters[0].img = this.getImage('idle-stand-east', 'characters');
+			}
+		} else if (this.keys.up) {
+			this.characters[0].img = this.getImage('idle-stand-north', 'characters');
+		} else if (this.keys.down) {
+			this.characters[0].img = this.getImage('idle-stand-south', 'characters');
+		}
+
+		if (this.keys.left) {
+			x -= speed;
+		}
+		if (this.keys.right) {
+			x += speed;
+		}
+
+		/* Vertical speed is half horizontal due to the isometric display */
+		if (this.keys.up) {
+			y -= speed / 2;
+		}
+		if (this.keys.down) {
+			y += speed / 2;
+		}
+
+		if (this.canWalk(this.world, [ x, y ],
+				[ this.characters[0].x, this.characters[0].y ])
+		) {
+			/* Yup, all good */
+			this.characters[0].x = x;
+			this.characters[0].y = y;
+		}
+	}
+
+	this.renderMap(this.world, this.characters);
+
+	this.ctx.font = '20pt Arial';
+	this.ctx.fillStyle = 'rgb(255, 255, 255)';
+	this.ctx.fillText('idle', 5, 25);
+
+	this.ctx.font = '5pt Arial';
+	this.ctx.fillStyle = 'rgb(255, 255, 255)';
+	this.ctx.fillText('Press tab to toggle grid', 5, 35);
+	this.ctx.fillText('arrows or wasd to move', 5, 45);
+	this.ctx.fillText(this.getTimeStr(), 5, 55);
+
+	this.ctx.restore();
+
+	/* Draw a scaled image to our display */
+	this.display.ctx.drawImage(this.canvas, 0, 0,
+		this.width * 2, this.height * 2);
 };
 
 IdleEngine.prototype.timeColors = [
@@ -525,13 +622,6 @@ IdleEngine.prototype.canWalk = function canWalk(map, to, from)
 
 IdleEngine.prototype.start = function start()
 {
-	var speed			= 2;
-	var fps				= 30;
-
-	/* How many real life seconds should it take for a day to pass in game */
-	// var SecondsPerDay	= 120;
-	var SecondsPerDay	= 30;
-
 	this.characters = [{
 		name:		"idle",
 		x:			25,
@@ -562,85 +652,20 @@ IdleEngine.prototype.start = function start()
 		}
 	}
 
+	window.requestAnimFrame = (function() {
+		return (
+			window.requestAnimationFrame       ||
+			window.webkitRequestAnimationFrame ||
+			window.mozRequestAnimationFrame    ||
+			function (callback) {
+				window.setTimeout(callback, 1000 / 60);
+			}
+		);
+	})();
+
 	this.loadImages(tiles, function() {
 		this.resize();
-		setInterval(function() {
-			this.time += 1 / (SecondsPerDay * fps);
-
-			this.ctx.save();
-
-			this.ctx.fillStyle = 'rgb(0, 0, 0)';
-			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-			/* Move idle based on keyboard input */
-			if (this.keys.left || this.keys.right || this.keys.up || this.keys.down) {
-				var x	= this.characters[0].x;
-				var y	= this.characters[0].y;
-
-				if (this.keys.left) {
-					if (this.keys.up) {
-						this.characters[0].img = this.getImage('idle-stand-northwest', 'characters');
-					} else if (this.keys.down) {
-						this.characters[0].img = this.getImage('idle-stand-southwest', 'characters');
-					} else {
-						this.characters[0].img = this.getImage('idle-stand-west', 'characters');
-					}
-				} else if (this.keys.right) {
-					if (this.keys.up) {
-						this.characters[0].img = this.getImage('idle-stand-northeast', 'characters');
-					} else if (this.keys.down) {
-						this.characters[0].img = this.getImage('idle-stand-southeast', 'characters');
-					} else {
-						this.characters[0].img = this.getImage('idle-stand-east', 'characters');
-					}
-				} else if (this.keys.up) {
-					this.characters[0].img = this.getImage('idle-stand-north', 'characters');
-				} else if (this.keys.down) {
-					this.characters[0].img = this.getImage('idle-stand-south', 'characters');
-				}
-
-				if (this.keys.left) {
-					x -= speed;
-				}
-				if (this.keys.right) {
-					x += speed;
-				}
-
-				/* Vertical speed is half horizontal due to the isometric display */
-				if (this.keys.up) {
-					y -= speed / 2;
-				}
-				if (this.keys.down) {
-					y += speed / 2;
-				}
-
-				if (this.canWalk(this.world, [ x, y ],
-						[ this.characters[0].x, this.characters[0].y ])
-				) {
-					/* Yup, all good */
-					this.characters[0].x = x;
-					this.characters[0].y = y;
-				}
-			}
-
-			this.render(this.world, this.characters);
-
-			this.ctx.font = '20pt Arial';
-			this.ctx.fillStyle = 'rgb(255, 255, 255)';
-			this.ctx.fillText('idle', 5, 25);
-
-			this.ctx.font = '5pt Arial';
-			this.ctx.fillStyle = 'rgb(255, 255, 255)';
-			this.ctx.fillText('Press tab to toggle grid', 5, 35);
-			this.ctx.fillText('arrows or wasd to move', 5, 45);
-			this.ctx.fillText(this.getTimeStr(), 5, 55);
-
-			this.ctx.restore();
-
-			/* Draw a scaled image to our display */
-			this.display.ctx.drawImage(this.canvas, 0, 0,
-				this.width * 2, this.height * 2);
-		}.bind(this), 1000 / fps);
+		this.render();
 	}.bind(this));
 };
 
