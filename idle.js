@@ -780,7 +780,7 @@ window.addEventListener('keydown', function(event)
 		/* Tab to toggle debug */
 		case 9:
 			if (c.engine.debug) {
-				console.log(JSON.stringify(c.engine.world));
+				console.log(JSON.stringify(c.engine.world, null, "\t"));
 			}
 
 			c.engine.debug = !c.engine.debug;
