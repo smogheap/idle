@@ -651,8 +651,8 @@ IdleEngine.prototype.start = function start()
 
 IdleEngine.prototype.resize = function resize()
 {
-	this.canvas.width	= window.innerWidth;
-	this.canvas.height	= window.innerHeight;
+	this.display.canvas.width	= window.innerWidth;
+	this.display.canvas.height	= window.innerHeight;
 };
 
 window.addEventListener('load', function()
