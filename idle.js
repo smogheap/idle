@@ -541,6 +541,8 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 	this.ctx.restore();
 
 	/* Draw a scaled image to our display */
+	this.display.ctx.clearRect(0, 0,
+			this.display.canvas.width, this.display.canvas.height);
 	this.display.ctx.drawImage(this.canvas,
 		(this.display.canvas.width / 2) - ((this.width * this.scale) / 2),
 		(this.display.canvas.height / 2) - ((this.height * this.scale) / 2),
