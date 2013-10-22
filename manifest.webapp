@@ -1,0 +1,15 @@
+{
+	"name":				"idle",
+	"description":		"A game about a very lazy boy",
+	"launch_path":		"/index.html",
+	"icons": {
+		"64":			"/icon.png",
+		"128":			"/icon128.png"
+	},
+
+	"developer": {
+		"name":			"Micah N Gorrell",
+		"url":			"http://minego.net"
+	},
+	"default_locale":	"en"
+}
