@@ -36,6 +36,13 @@ function IdleEngine(canvas)
 		ctx:				canvas.getContext('2d')
 	};
 
+	/*
+		Scale the image based on the size of our display canvas, this will be
+		updated in the resize function.
+	*/
+	this.scale				= 2;
+
+
 	this.imgcache			= {};
 
 	this.tileSize			= [ 32, 16 ];
@@ -551,7 +558,7 @@ IdleEngine.prototype.render = function render(time)
 
 	/* Draw a scaled image to our display */
 	this.display.ctx.drawImage(this.canvas, 0, 0,
-		this.width * 2, this.height * 2);
+		this.width * this.scale, this.height * this.scale);
 };
 
 IdleEngine.prototype.timeColors = [
@@ -741,6 +748,24 @@ IdleEngine.prototype.resize = function resize()
 	this.display.ctx.imageSmoothingEnabled			= false;
 	this.display.ctx.mozImageSmoothingEnabled		= false;
 	this.display.ctx.webkitImageSmoothingEnabled	= false;
+
+	/*
+		Determine the best scaling to use to fill the display we have as much as
+		possible while sticking to an even multiple of our internal screen size.
+	*/
+	var sw	= Math.floor(window.innerWidth / this.width);
+	var sh	= Math.floor(window.innerHeight / this.height);
+
+	if (sw < sh) {
+		this.scale = sw;
+	} else {
+		this.scale = sh;
+	}
+
+	if (this.scale < 1) {
+		/* Sanity check */
+		this.scale = 1;
+	}
 };
 
 window.addEventListener('load', function()
