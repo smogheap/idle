@@ -663,10 +663,6 @@ IdleEngine.prototype.getTimeStr = function getTimeStr(time)
 //		not be standing right next to it afterwards...
 IdleEngine.prototype.canWalk = function canWalk(map, to, from)
 {
-	if (this.debug) {
-		return(true);
-	}
-
 	var fromM	= this.isoToMap(from[0], from[1]);
 	var toM		= this.isoToMap(to[0], to[1]);
 
@@ -677,6 +673,10 @@ IdleEngine.prototype.canWalk = function canWalk(map, to, from)
 		// TODO	Determine which direction they are walking and switch to a new
 		//		screen.
 		return(false);
+	}
+
+	if (this.debug) {
+		return(true);
 	}
 
 	if (!fromT) {
