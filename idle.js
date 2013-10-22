@@ -63,7 +63,7 @@ function IdleEngine(canvas)
 }
 
 IdleEngine.prototype.tiles = {
-	"ground": {
+	ground: {
 		" ": { name: "grass",	side: "elevation-soil"			},
 		"_": { name: "grass",	side: "elevation-soil-fossil1"	},
 		"#": { name: "rock",	side: "elevation-rock"			},
@@ -72,12 +72,12 @@ IdleEngine.prototype.tiles = {
 		"O": { name: "hole"										}
 	},
 
-	"props": {
+	props: {
 		"-": { name: "fence-ne"									},
 		"|": { name: "fence-nw"									}
 	},
 
-	"characters": {
+	characters: {
 		"idle": {
 			n:	"idle-stand-north",
 			ne:	"idle-stand-northeast",
@@ -281,16 +281,57 @@ IdleEngine.prototype.getMapTile = function getMapTile(map, x, y)
 	return(tile);
 };
 
-// TODO	Update...
 IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
 {
-	if (y < 0 || y >= map.length || x < 0 || x >= map[y].length) {
+	var d = 1;
+
+	console.log('Set tile: ' + c);
+
+	if (y < 0 || y >= map.length || x < 0 || x >= map.ground[y].length) {
 		return;
 	}
 
-	var old = map[y];
+	var replace = function(old, x, c) {
+		return(old.substr(0, x) + c + old.substr(x + 1));
+	};
 
-	map[y] = old.substr(0, x) + c + old.substr(x + 1);
+	switch (c) {
+		case ' ':
+			/* Reset the tile in all 3 maps */
+			map.ground[y]		= replace(map.ground[y],	x, ' ');
+			map.props[y]		= replace(map.props[y],		x, ' ');
+			map.elevation[y]	= replace(map.elevation[y], x, ' ');
+			break;
+
+		case '-':
+			d = -1;
+			// fallthrough
+
+		case '+': case '=':
+			/* Adjust the elevation */
+			var e = parseInt(map.elevation[y].charAt(x), 16);
+
+			if (isNaN(e)) {
+				e = 5;
+			}
+
+			e += d;
+
+			if (e < 0 || e > 0xf) {
+				return;
+			}
+
+			map.elevation[y]	= replace(map.elevation[y], x, e.toString(16));
+			break;
+
+		default:
+			if (this.tiles.ground[c]) {
+				map.ground[y]	= replace(map.ground[y],	x, c);
+			} else if (this.tiles.props[c]) {
+				map.props[y]	= replace(map.props[y],		x, c);
+			}
+			break;
+	}
 };
 
 IdleEngine.prototype.renderMap = function renderMap(map, characters)
@@ -504,9 +545,9 @@ IdleEngine.prototype.render = function render(time)
 
 	this.ctx.font = '5pt Arial';
 	this.ctx.fillStyle = 'rgb(255, 255, 255)';
-	this.ctx.fillText('Press tab to toggle grid', 5, 35);
-	this.ctx.fillText('arrows or wasd to move', 5, 45);
-	this.ctx.fillText(this.getTimeStr(), 5, 55);
+	this.ctx.fillText('Press tab to toggle editor',	5, 35);
+	this.ctx.fillText('arrows or wasd to move',		5, 45);
+	this.ctx.fillText(this.getTimeStr(),			5, 55);
 
 	this.ctx.restore();
 
@@ -626,6 +667,12 @@ IdleEngine.prototype.canWalk = function canWalk(map, to, from)
 
 	var fromT	= this.getMapTile(map, fromM[0], fromM[1]);
 	var toT		= this.getMapTile(map, toM[0], toM[1]);
+
+	if (!toT) {
+		// TODO	Determine which direction they are walking and switch to a new
+		//		screen.
+		return(false);
+	}
 
 	if (!fromT) {
 		return(true);
@@ -776,18 +823,16 @@ window.addEventListener('keypress', function(event)
 
 	if (e.debug) {
 		try {
-			s = String.fromCharCode(event.which).trim();
+			s = String.fromCharCode(event.which);
 		} catch (e) {
 			return;
 		}
 
 		/* Get the tile the character is standing on */
-		var t	= e.tiles[s];
-
 		if (s) {
 			var m = e.isoToMap(e.characters[0].x, e.characters[0].y);
 
-			e.setMapTile(e.world.map, m[0], m[1], s);
+			e.setMapTile(e.world, m[0], m[1], s);
 		}
 	}
 }, false);
