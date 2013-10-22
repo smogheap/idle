@@ -30,10 +30,6 @@ function IdleEngine(canvas)
 
 	this.ctx				= this.canvas.getContext('2d');
 
-	/* We want to look old school */
-	this.ctx.imageSmoothingEnabled			= false;
-	this.ctx.webkitImageSmoothingEnabled	= false;
-
 	/* Keep track of our display canvas */
 	this.display = {
 		canvas:				canvas,
@@ -653,6 +649,11 @@ IdleEngine.prototype.resize = function resize()
 {
 	this.display.canvas.width	= window.innerWidth;
 	this.display.canvas.height	= window.innerHeight;
+
+	/* We want to look old school */
+	this.display.ctx.imageSmoothingEnabled			= false;
+	this.display.ctx.mozImageSmoothingEnabled		= false;
+	this.display.ctx.webkitImageSmoothingEnabled	= false;
 };
 
 window.addEventListener('load', function()
