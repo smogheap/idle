@@ -20,6 +20,8 @@ function IdleEngine(canvas)
 	this.canvas				= canvas;
 	this.ctx				= canvas.getContext('2d');
 
+	this.ctx.imageSmoothingEnabled = false;
+
 	this.imgcache			= {};
 
 	this.tileSize			= [ 32, 16 ];
