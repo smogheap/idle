@@ -189,6 +189,33 @@ IdleEngine.prototype.outlineTile = function outlineTile(full, x, y, color)
 	this.ctx.restore();
 };
 
+IdleEngine.prototype.outlineBoundingBox = function outlineBoundingBox(npc, elevationOffset, color)
+{
+	this.ctx.save();
+
+	var x = npc.x;
+	var y = npc.y;
+
+	if (elevationOffset) {
+		y -= elevationOffset;
+	}
+
+	x += this.offset[0];
+	y += this.offset[1] - 1;
+
+	this.ctx.fillStyle		= color || 'rgba(255, 255, 255, 0.5)';
+	this.ctx.beginPath();
+
+	this.ctx.moveTo(x - (npc.bounding[0] / 2), y);
+	this.ctx.lineTo(x, y - (npc.bounding[1] / 2));
+	this.ctx.lineTo(x + (npc.bounding[0] / 2), y);
+	this.ctx.lineTo(x, y + (npc.bounding[1] / 2));
+	this.ctx.lineTo(x - (npc.bounding[0] / 2), y);
+
+	this.ctx.fill();
+	this.ctx.restore();
+};
+
 /* Return a tile based on the ground, elevation & props maps for this screen */
 IdleEngine.prototype.getMapTile = function getMapTile(map, x, y)
 {
@@ -301,8 +328,11 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 		/*
 			Calculate the map coords of the character so we know when to render
 			him/her.
+
+			The map coords should be calculated from the bottom center of the
+			character's bounding box.
 		*/
-		npc.map = this.isoToMap(npc.x, npc.y);
+		npc.map = this.isoToMap(npc.x, npc.y + (npc.bounding[1] / 2));
 	}
 
 	/* Set some clipping for the game area */
@@ -382,10 +412,13 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 							'rgba(0, 0, 255, 0.3)');
 					}
 
-					/* Bottom center position of the character */
+					/*
+						Bottom center position of the character's bounding box
+					*/
 					var l = npc.x - (npc.img.width / 2);
 					var t = npc.y - (npc.img.height);
 
+					this.outlineBoundingBox(npc, eloff);
 					this.ctx.drawImage(npc.img,
 						l + this.offset[0],
 						t + this.offset[1] - eloff);
@@ -466,10 +499,9 @@ IdleEngine.prototype.inputLoop = function inputLoop(time)
 			y += speed / 2;
 		}
 
-		var to = this.walkTo(this.getMap(), [ x, y ],
-				[ this.characters[0].x, this.characters[0].y ]);
+		var to;
 
-		if (to) {
+		if ((to = this.walkTo(this.characters[0], this.getMap(), [ x, y ]))) {
 			/* Yup, all good */
 			this.characters[0].x = to[0];
 			this.characters[0].y = to[1];
@@ -606,69 +638,90 @@ IdleEngine.prototype.getTimeStr = function getTimeStr(time)
 /*
 	Based on a characters coords (iso, not map) determine if the character is
 	allowed to move from one spot to another.
+
+	If allowed then return the coordinates that the character ends up on.
 */
-// TODO	Perhaps there should be cases where Idle gets pushed a bit further
-//		forward... For example... He can walk off a cliff, but then he should
-//		not be standing right next to it afterwards...
-
-IdleEngine.prototype.walkTo = function walkTo(map, to, from)
+IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
 {
-	var fromM		= this.isoToMap(from[0], from[1]);
-	var toM			= this.isoToMap(to[0], to[1]);
-
+	/* Where is the character coming from? */
+	var fromM		= this.isoToMap(npc.x, npc.y);
 	var fromT		= this.getMapTile(map, fromM[0], fromM[1]);
-	var toT			= this.getMapTile(map, toM[0], toM[1]);
-
 	var newscreen	= null;
 
-	if (!toT) {
-		// TODO	Determine which map he should be walking to.
-		newscreen	= [ 0, 1 ];
+	/*
+		Check each corner of the character's bounding box. The box should be
+		small enough to let the character through a 1 tile gap.
+	*/
+	var tolist = [
+		[ to[0] - (npc.bounding[0] / 2), to[1] ],
+		[ to[0] + (npc.bounding[0] / 2), to[1] ],
+		[ to[0], to[1] - (npc.bounding[1] / 2) ],
+		[ to[0], to[1] + (npc.bounding[1] / 2) ],
+		[ to[0], to[1] ]
+	];
 
-		if ((map = this.getMap(newscreen.toString()))) {
-			while (toM[1] < 0) {
-				toM[1] += map.ground.length;
-			}
-			toM[1] %= map.ground.length;
+	for (var i = 0, t; t = tolist[i]; i++) {
+		var toM = this.isoToMap(t[0], t[1]);
+		var toT = this.getMapTile(map, toM[0], toM[1]);
 
-			while (toM[0] < 0) {
-				toM[0] += map.ground[toM[1]].length;
-			}
-			toM[0] %= map.ground[toM[1]].length;
-
-			toT = this.getMapTile(map, toM[0], toM[1]);
-		}
+		/* Only the last check can actually change the screen */
+		newscreen = null;
 
 		if (!toT) {
-			return(null);
+			// TODO	Determine which map he should be walking to.
+			newscreen	= [ 0, 1 ];
+
+			map = this.getMap(newscreen.toString());
+
+			if (!map && this.debug) {
+				// TODO	Create a new map
+			}
+
+			if (map) {
+				while (toM[1] < 0) {
+					toM[1] += map.ground.length;
+				}
+				toM[1] %= map.ground.length;
+
+				while (toM[0] < 0) {
+					toM[0] += map.ground[toM[1]].length;
+				}
+				toM[0] %= map.ground[toM[1]].length;
+
+				toT = this.getMapTile(map, toM[0], toM[1]);
+			}
+
+			if (!toT) {
+				return(null);
+			}
 		}
-	}
 
-	if (!this.debug) {
-		if (fromT) {
-			if (toT.elevation - fromT.elevation > 1) {
-				/* He can't climb something that steep */
-				return(null);
+		if (!this.debug) {
+			if (fromT) {
+				if (toT.elevation - fromT.elevation > 1) {
+					/* He can't climb something that steep */
+					return(null);
+				}
+
+				if (fromT.elevation - toT.elevation > 2) {
+					/* We wouldn't want him to hurt himself */
+					return(null);
+				}
+
+				if (toT.prop) {
+					/* He shouldn't walk into things, that would hurt */
+					return(null);
+				}
 			}
 
-			if (fromT.elevation - toT.elevation > 2) {
-				/* We wouldn't want him to hurt himself */
-				return(null);
+			if (newscreen) {
+				this.screen = newscreen;
+				/* Calculate the new coords for the player */
+				to = this.mapToIso(toM[0], toM[1]);
+
+				/* Center him */
+				to[1] -= this.tileSize[1] / 2;
 			}
-
-			if (toT.prop) {
-				/* He shouldn't walk into things, that would hurt */
-				return(null);
-			}
-		}
-
-		if (newscreen) {
-			this.screen = newscreen;
-			/* Calculate the new coords for the player */
-			to = this.mapToIso(toM[0], toM[1]);
-
-			/* Center him */
-			to[1] -= this.tileSize[1] / 2;
 		}
 	}
 
@@ -685,7 +738,10 @@ IdleEngine.prototype.start = function start()
 		x:			iso[0],
 		y:			iso[1] - this.tileSize[1] / 2,
 
-		img:		this.getImage('idle-stand-east')
+		img:		this.getImage('idle-stand-east'),
+
+		/* The size of the character's bounding box in isometric space */
+		bounding:	[ 16, 8 ]
 	}];
 
 	this.keys = {};
