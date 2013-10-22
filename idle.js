@@ -16,11 +16,29 @@
 
 function IdleEngine(canvas)
 {
-	this.debug				= false;
-	this.canvas				= canvas;
-	this.ctx				= canvas.getContext('2d');
+	canvas.engine			= this;
 
-	this.ctx.imageSmoothingEnabled = false;
+	this.debug				= false;
+
+	/* Setup our internal canvas */
+	this.width				= 320;
+	this.height				= 240;
+
+	this.canvas				= document.createElement('canvas');
+	this.canvas.setAttribute('width',		this.width);
+	this.canvas.setAttribute('height',		this.height);
+
+	this.ctx				= this.canvas.getContext('2d');
+
+	/* We want to look old school */
+	this.ctx.imageSmoothingEnabled			= false;
+	this.ctx.webkitImageSmoothingEnabled	= false;
+
+	/* Keep track of our display canvas */
+	this.display = {
+		canvas:				canvas,
+		ctx:				canvas.getContext('2d')
+	};
 
 	this.imgcache			= {};
 
@@ -28,8 +46,6 @@ function IdleEngine(canvas)
 
 	/* Offset for rendering in the middle of the screen */
 	this.offset				= [ 160, 70 ];
-
-	this.canvas.engine		= this;
 
 	this.seed				= WRand.getSeed(NaN);
 
@@ -625,16 +641,18 @@ IdleEngine.prototype.start = function start()
 			this.ctx.fillText(this.getTimeStr(), 5, 55);
 
 			this.ctx.restore();
+
+			/* Draw a scaled image to our display */
+			this.display.ctx.drawImage(this.canvas, 0, 0,
+				this.width * 2, this.height * 2);
 		}.bind(this), 1000 / fps);
 	}.bind(this));
 };
 
 IdleEngine.prototype.resize = function resize()
 {
-	// For now use a fixed size
-
-	// this.canvas.width	= window.innerWidth;
-	// this.canvas.height	= window.innerHeight;
+	this.canvas.width	= window.innerWidth;
+	this.canvas.height	= window.innerHeight;
 };
 
 window.addEventListener('load', function()
