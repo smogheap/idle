@@ -457,6 +457,19 @@ IdleEngine.prototype.inputLoop = function inputLoop(time)
 
 	this.time += 1 / (SecondsPerDay * 30);
 
+	if (this.characters[0].ignoreTime > 0) {
+		/*
+			Something happened to the character that should cause input to be
+			ignored for a time period. Assuming that this loop is actually
+			running 30 times a second, reduce the time by that amount.
+		*/
+		this.characters[0].ignoreTime -= 33;
+
+		return;
+	} else {
+		this.characters[0].ignoreTime = 0;
+	}
+
 	/* Move idle based on keyboard input */
 	if (this.keys.left || this.keys.right || this.keys.up || this.keys.down) {
 		var x	= this.characters[0].x;
@@ -713,15 +726,30 @@ IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
 					return(null);
 				}
 			}
+		}
 
-			if (newscreen) {
-				this.screen = newscreen;
-				/* Calculate the new coords for the player */
-				to = this.mapToIso(toM[0], toM[1]);
+		if (newscreen) {
+			this.screen = newscreen;
 
-				/* Center him */
-				to[1] -= this.tileSize[1] / 2;
-			}
+			/* Move him to the center of the correct tile on the new screen */
+			to = this.mapToIso(toM[0], toM[1]);
+			to[1] -= this.tileSize[1] / 2;
+		}
+
+		if (Math.abs(toT.elevation - fromT.elevation) > 1) {
+			/*
+				Center him on the new tile to ensure that he isn't standing to
+				close to an edge after an elevation change.
+			*/
+			to = this.mapToIso(toM[0], toM[1]);
+			to[1] -= this.tileSize[1] / 2;
+
+			/*
+				Ignore input for a short period to account for jumping to the
+				center of a tile, and to make it appear that the jump stunned
+				him a bit..
+			*/
+			npc.ignoreTime = 33 * 8;
 		}
 	}
 
