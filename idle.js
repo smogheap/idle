@@ -42,6 +42,8 @@ function IdleEngine(canvas)
 	*/
 	this.scale				= 2;
 
+	/* The screen we start on */
+	this.screen				= [ 0, 0 ];
 
 	this.imgcache			= {};
 
@@ -87,51 +89,9 @@ IdleEngine.prototype.tiles = {
 	}
 };
 
-IdleEngine.prototype.world = {
-	/* A map of the tiles on the ground */
-	ground: [
-		"# ### ##__ ",
-		" ####%%    ",
-		"  # #      ",
-		"  #   O    ",
-		"      oo   ",
-		"           ",
-		"   #       ",
-		"  #        ",
-		"  #  ##  # ",
-		" ## #  ####",
-		"        #  "
-	],
-
-	/* An elevation map, default is 5. Values are in hex */
-	elevation: [
-		"acbaa 9876 ",
-		" 9ab999    ",
-		"  8 6      ",
-		"  6        ",
-		"           ",
-		"     877   ",
-		"       766 ",
-		"           ",
-		"   0000 0  ",
-		"  4        ",
-		" 434       "
-	],
-
-	/* A map of any props */
-	props: [
-		"           ",
-		"           ",
-		"           ",
-		"        ---",
-		"       |   ",
-		"       |   ",
-		"       |   ",
-		"        ---",
-		"------     ",
-		"           ",
-		"           "
-	]
+IdleEngine.prototype.getMap = function getMap(screen)
+{
+	return(world[(screen || this.screen).toString()]);
 };
 
 IdleEngine.prototype.getImage = function getImage(name, type)
@@ -351,7 +311,7 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 
 	var x = this.offset[0];
 	var y = this.offset[1] - this.tileSize[1] / 2;
-	var w = this.world.ground.length / 2;
+	var w = map.ground.length / 2;
 
 	this.ctx.moveTo(x, y - 3 - (this.tileSize[1] * 4));
 	this.ctx.lineTo(x + (w * this.tileSize[0]) + 3,
@@ -506,12 +466,13 @@ IdleEngine.prototype.inputLoop = function inputLoop(time)
 			y += speed / 2;
 		}
 
-		if (this.canWalk(this.world, [ x, y ],
-				[ this.characters[0].x, this.characters[0].y ])
-		) {
+		var to = this.walkTo(this.getMap(), [ x, y ],
+				[ this.characters[0].x, this.characters[0].y ]);
+
+		if (to) {
 			/* Yup, all good */
-			this.characters[0].x = x;
-			this.characters[0].y = y;
+			this.characters[0].x = to[0];
+			this.characters[0].y = to[1];
 		}
 	}
 };
@@ -526,7 +487,7 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 	this.ctx.fillStyle = 'rgb(0, 0, 0)';
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-	this.renderMap(this.world, this.characters);
+	this.renderMap(this.getMap(), this.characters);
 
 	this.ctx.font = '20pt Arial';
 	this.ctx.fillStyle = 'rgb(255, 255, 255)';
@@ -649,52 +610,80 @@ IdleEngine.prototype.getTimeStr = function getTimeStr(time)
 // TODO	Perhaps there should be cases where Idle gets pushed a bit further
 //		forward... For example... He can walk off a cliff, but then he should
 //		not be standing right next to it afterwards...
-IdleEngine.prototype.canWalk = function canWalk(map, to, from)
-{
-	var fromM	= this.isoToMap(from[0], from[1]);
-	var toM		= this.isoToMap(to[0], to[1]);
 
-	var fromT	= this.getMapTile(map, fromM[0], fromM[1]);
-	var toT		= this.getMapTile(map, toM[0], toM[1]);
+IdleEngine.prototype.walkTo = function walkTo(map, to, from)
+{
+	var fromM		= this.isoToMap(from[0], from[1]);
+	var toM			= this.isoToMap(to[0], to[1]);
+
+	var fromT		= this.getMapTile(map, fromM[0], fromM[1]);
+	var toT			= this.getMapTile(map, toM[0], toM[1]);
+
+	var newscreen	= null;
 
 	if (!toT) {
-		// TODO	Determine which direction they are walking and switch to a new
-		//		screen.
-		return(false);
+		// TODO	Determine which map he should be walking to.
+		newscreen	= [ 0, 1 ];
+
+		if ((map = this.getMap(newscreen.toString()))) {
+			while (toM[1] < 0) {
+				toM[1] += map.ground.length;
+			}
+			toM[1] %= map.ground.length;
+
+			while (toM[0] < 0) {
+				toM[0] += map.ground[toM[1]].length;
+			}
+			toM[0] %= map.ground[toM[1]].length;
+
+			toT = this.getMapTile(map, toM[0], toM[1]);
+		}
+
+		if (!toT) {
+			return(null);
+		}
 	}
 
-	if (this.debug) {
-		return(true);
+	if (!this.debug) {
+		if (fromT) {
+			if (toT.elevation - fromT.elevation > 1) {
+				/* He can't climb something that steep */
+				return(null);
+			}
+
+			if (fromT.elevation - toT.elevation > 2) {
+				/* We wouldn't want him to hurt himself */
+				return(null);
+			}
+
+			if (toT.prop) {
+				/* He shouldn't walk into things, that would hurt */
+				return(null);
+			}
+		}
+
+		if (newscreen) {
+			this.screen = newscreen;
+			/* Calculate the new coords for the player */
+			to = this.mapToIso(toM[0], toM[1]);
+
+			/* Center him */
+			to[1] -= this.tileSize[1] / 2;
+		}
 	}
 
-	if (!fromT) {
-		return(true);
-	}
-
-	if (toT.elevation - fromT.elevation > 1) {
-		/* He can't climb something that steep */
-		return(false);
-	}
-
-	if (fromT.elevation - toT.elevation > 2) {
-		/* We wouldn't want him to hurt himself */
-		return(false);
-	}
-
-	if (toT.prop) {
-		/* He shouldn't walk into things, that would hurt */
-		return(false);
-	}
-
-	return(true);
+	return(to);
 };
 
 IdleEngine.prototype.start = function start()
 {
+	/* Find the center of the map */
+	var iso = this.mapToIso(5, 5);
+
 	this.characters = [{
 		name:		"idle",
-		x:			25,
-		y:			150,
+		x:			iso[0],
+		y:			iso[1] - this.tileSize[1] / 2,
 
 		img:		this.getImage('idle-stand-east')
 	}];
@@ -794,7 +783,7 @@ window.addEventListener('keydown', function(event)
 		/* Tab to toggle debug */
 		case 9:
 			if (c.engine.debug) {
-				console.log(JSON.stringify(c.engine.world, null, "\t"));
+				console.log(JSON.stringify(c.engine.getMap(), null, "\t"));
 			}
 
 			c.engine.debug = !c.engine.debug;
@@ -852,13 +841,13 @@ window.addEventListener('keypress', function(event)
 
 			if (s == ' ' && event.shiftKey) {
 				/* Reset the world when shift+space is pressed */
-				for (y = 0; y < e.world.ground.length; y++) {
-					for (x = 0; x < e.world.ground[y].length; x++) {
-						e.setMapTile(e.world, x, y, ' ');
+				for (y = 0; y < e.getMap().ground.length; y++) {
+					for (x = 0; x < e.getMap().ground[y].length; x++) {
+						e.setMapTile(e.getMap(), x, y, ' ');
 					}
 				}
 			} else {
-				e.setMapTile(e.world, m[0], m[1], s);
+				e.setMapTile(e.getMap(), m[0], m[1], s);
 			}
 		}
 	}
