@@ -68,8 +68,8 @@ IdleEngine.prototype.tiles = {
 		"_": { name: "grass",	side: "elevation-soil-fossil1"	},
 		"#": { name: "rock",	side: "elevation-rock"			},
 		"%": { name: "rock",	side: "elevation-rock-fossil2"	},
-		"o": { name: "puddle"									},
-		"O": { name: "hole"										}
+		"o": { name: "puddle",	side: "elevation-soil"			},
+		"O": { name: "hole",	side: "elevation-soil"			}
 	},
 
 	props: {
