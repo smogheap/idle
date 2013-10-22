@@ -48,18 +48,47 @@ function IdleEngine(canvas)
 	/* Start at noon */
 	this.time				= 0.5;
 
+	window.requestAnimFrame = (function() {
+		return (
+			window.requestAnimationFrame       ||
+			window.webkitRequestAnimationFrame ||
+			window.mozRequestAnimationFrame    ||
+			function (callback) {
+				window.setTimeout(callback, 1000 / 60);
+			}
+		);
+	})();
+
 	this.start();
 }
 
 IdleEngine.prototype.tiles = {
-	" ": { name: "grass",	side: "elevation-soil"			},
-	"_": { name: "grass",	side: "elevation-soil-fossil1"	},
-	"#": { name: "rock",	side: "elevation-rock"			},
-	"%": { name: "rock",	side: "elevation-rock-fossil2"	},
-	"o": { name: "puddle"									},
-	"O": { name: "hole"										},
-	"-": { name: "fence-ne"									},
-	"|": { name: "fence-nw"									}
+	"ground": {
+		" ": { name: "grass",	side: "elevation-soil"			},
+		"_": { name: "grass",	side: "elevation-soil-fossil1"	},
+		"#": { name: "rock",	side: "elevation-rock"			},
+		"%": { name: "rock",	side: "elevation-rock-fossil2"	},
+		"o": { name: "puddle"									},
+		"O": { name: "hole"										}
+	},
+
+	"props": {
+		"-": { name: "fence-ne"									},
+		"|": { name: "fence-nw"									}
+	},
+
+	"characters": {
+		"idle": {
+			n:	"idle-stand-north",
+			ne:	"idle-stand-northeast",
+			e:	"idle-stand-east",
+			se:	"idle-stand-southeast",
+			s:	"idle-stand-south",
+			sw:	"idle-stand-southwest",
+			w:	"idle-stand-west",
+			nw:	"idle-stand-northwest"
+		}
+	}
 };
 
 IdleEngine.prototype.world = {
@@ -111,7 +140,7 @@ IdleEngine.prototype.world = {
 
 IdleEngine.prototype.getImage = function getImage(name, type)
 {
-	type = type || 'tiles';
+	type = type || 'images';
 
 	if (!this.imgcache[name]) {
 		this.imgcache[name] = new Image();
@@ -214,7 +243,7 @@ IdleEngine.prototype.getMapTile = function getMapTile(map, x, y)
 
 	/* Get the ground and side tile from the first map */
 	if ((line = map.ground[y]) && (c = line.charAt(x)) && c.length == 1) {
-		if ((t = this.tiles[c])) {
+		if ((t = this.tiles.ground[c])) {
 			if (t.name) {
 				tile.img = this.getImage(t.name);
 			}
@@ -242,7 +271,7 @@ IdleEngine.prototype.getMapTile = function getMapTile(map, x, y)
 
 	/* Is there a prop on this tile? */
 	if ((line = map.props[y]) && (c = line.charAt(x)) && c.length == 1) {
-		if (c != ' ' && (t = this.tiles[c])) {
+		if (c != ' ' && (t = this.tiles.props[c])) {
 			if (t.name) {
 				tile.prop = this.getImage(t.name);
 			}
@@ -423,24 +452,24 @@ IdleEngine.prototype.render = function render(time)
 
 		if (this.keys.left) {
 			if (this.keys.up) {
-				this.characters[0].img = this.getImage('idle-stand-northwest', 'characters');
+				this.characters[0].img = this.getImage('idle-stand-northwest');
 			} else if (this.keys.down) {
-				this.characters[0].img = this.getImage('idle-stand-southwest', 'characters');
+				this.characters[0].img = this.getImage('idle-stand-southwest');
 			} else {
-				this.characters[0].img = this.getImage('idle-stand-west', 'characters');
+				this.characters[0].img = this.getImage('idle-stand-west');
 			}
 		} else if (this.keys.right) {
 			if (this.keys.up) {
-				this.characters[0].img = this.getImage('idle-stand-northeast', 'characters');
+				this.characters[0].img = this.getImage('idle-stand-northeast');
 			} else if (this.keys.down) {
-				this.characters[0].img = this.getImage('idle-stand-southeast', 'characters');
+				this.characters[0].img = this.getImage('idle-stand-southeast');
 			} else {
-				this.characters[0].img = this.getImage('idle-stand-east', 'characters');
+				this.characters[0].img = this.getImage('idle-stand-east');
 			}
 		} else if (this.keys.up) {
-			this.characters[0].img = this.getImage('idle-stand-north', 'characters');
+			this.characters[0].img = this.getImage('idle-stand-north');
 		} else if (this.keys.down) {
-			this.characters[0].img = this.getImage('idle-stand-south', 'characters');
+			this.characters[0].img = this.getImage('idle-stand-south');
 		}
 
 		if (this.keys.left) {
@@ -627,43 +656,32 @@ IdleEngine.prototype.start = function start()
 		x:			25,
 		y:			150,
 
-		img:		this.getImage('idle-stand-east', 'characters')
+		img:		this.getImage('idle-stand-east')
 	}];
 
 	this.keys = {};
 
-	/* Build a list of tiles to load */
-	var tiles = [];
-	for (var i = 0, k; k = Object.keys(this.tiles)[i]; i++) {
-		var t = this.tiles[k];
+	/* Build a list of images to load */
+	var images = [];
 
-		if (isNaN(t.elevation)) {
-			t.elevation = 0;
-		}
+	var listimages = function(o) {
+		var keys	= Object.keys(o);
 
-		/* Normal tile image */
-		if (t.name && -1 == tiles.indexOf(t.name)) {
-			tiles.push(t.name);
-		}
-
-		/* Elevation image */
-		if (t.elname && -1 == tiles.indexOf(t.elname)) {
-			tiles.push(t.elname);
-		}
-	}
-
-	window.requestAnimFrame = (function() {
-		return (
-			window.requestAnimationFrame       ||
-			window.webkitRequestAnimationFrame ||
-			window.mozRequestAnimationFrame    ||
-			function (callback) {
-				window.setTimeout(callback, 1000 / 60);
+		for (var i = 0, k; k = keys[i]; i++) {
+			if (typeof o[k] === "string") {
+				if (-1 == images.indexOf(o[k])) {
+					images.push(o[k]);
+				}
+			} else {
+				listimages(o[k]);
 			}
-		);
-	})();
+		}
+	};
 
-	this.loadImages(tiles, function() {
+	listimages(this.tiles);
+	console.log('Preloading images:', images);
+
+	this.loadImages(images, function() {
 		this.resize();
 		this.render();
 	}.bind(this));
