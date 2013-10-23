@@ -429,7 +429,7 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 };
 
-IdleEngine.prototype.inputLoop = function inputLoop(time)
+IdleEngine.prototype.inputLoop = function inputLoop()
 {
 	/* How many real life seconds should it take for a day to pass in game */
 	var SecondsPerDay	= 30;
@@ -623,6 +623,7 @@ IdleEngine.prototype.start = function start()
 	];
 
 	this.keys = {};
+	this.keys.changed = new Date();
 
 	/* Build a list of images to load */
 	var images = [];
@@ -695,24 +696,31 @@ window.addEventListener('resize', function()
 
 window.addEventListener('keydown', function(event)
 {
-	var c = document.getElementById('game');
+	var c		= document.getElementById('game');
+	var name	= null;
+
+	/*
+		Many browsers will repeat this event while the key is being pressed,
+		which is very annoying. Only reset the changed timestamp if the values
+		have actually changed.
+	*/
 
 	switch (event.keyCode) {
 		case 65:	// a, h or left
 		case 72:
-		case 37:	c.engine.keys.left	= true; break;
+		case 37:	name = 'left';	break;
 
 		case 87:	// w, k or up
 		case 75:
-		case 38:	c.engine.keys.up	= true; break;
+		case 38:	name = 'up';	break;
 
 		case 68:	// d, l or right
 		case 76:
-		case 39:	c.engine.keys.right	= true; break;
+		case 39:	name = 'right';	break;
 
 		case 83:	// s, j or down
 		case 74:
-		case 40:	c.engine.keys.down	= true; break;
+		case 40:	name = 'down';	break;
 
 		/* Tab to toggle debug */
 		case 9:
@@ -726,12 +734,19 @@ window.addEventListener('keydown', function(event)
 		default:	return;
 	}
 
+	if (name && !c.engine.keys[name]) {
+		c.engine.keys.changed = new Date();
+		c.engine.keys[name] = true;
+	}
+
 	event.preventDefault();
 }, false);
 
 window.addEventListener('keyup', function(event)
 {
 	var c = document.getElementById('game');
+
+	c.engine.keys.changed = new Date();
 
 	switch (event.keyCode) {
 		case 65:	// a, h or left
@@ -804,6 +819,7 @@ window.addEventListener('load', function()
 				this.y = ev.pageY;
 			}
 
+			c.engine.keys.changed = new Date();
 			this.update();
 		},
 

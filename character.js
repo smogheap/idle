@@ -306,9 +306,15 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 					return(null);
 				}
 
-				if (fromT.elevation - toT.elevation > 2) {
-					/* We wouldn't want him to hurt himself */
-					return(null);
+				if (fromT.elevation - toT.elevation > 1) {
+					/*
+						Don't let him jump off of something unless he has had
+						a second (at least 1 second) to think it through.
+					*/
+					if ((new Date() - this.engine.keys.changed) < 500) {
+						// console.log('Sorry, it has only been', (new Date() - this.engine.keys.changed), 'ms... think it over some more');
+						return(null);
+					}
 				}
 
 				if (toT.prop) {
@@ -327,6 +333,8 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 		to[1] -= this.engine.tileSize[1] / 2;
 
 		delete this.destination;
+
+		this.engine.keys.changed = new Date();
 		return(to);
 	}
 
@@ -363,6 +371,7 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 
 				The choice of x vs y is arbitrary here...
 			*/
+			this.engine.keys.changed = new Date();
 			return([ this.x, to[1] ]);
 		}
 
@@ -374,9 +383,12 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 		}
 
 		this.destination = match.map;
+
+		this.engine.keys.changed = new Date();
 		return([ this.x, this.y ]);
 	}
 
+	this.engine.keys.changed = new Date();
 	return(to);
 };
 
