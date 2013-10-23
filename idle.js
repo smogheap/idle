@@ -131,10 +131,13 @@ IdleEngine.prototype.isoToMap = function isoToMap(x, y)
 	var w = this.tileSize[0] / 2;
 	var h = this.tileSize[1] / 2;
 
+	/* Our isometric coords are based on the bottom corner of a tile */
+	ty -= (this.tileSize[1] - 1);
+
 	var tx = (x / w + (y / h)) / 2;
 	var ty = (y / h - (x / w)) / 2;
 
-	return([ Math.round(tx), Math.round(ty) ]);
+	return([ Math.floor(tx), Math.floor(ty) ]);
 };
 
 /*
@@ -150,10 +153,10 @@ IdleEngine.prototype.mapToIso = function mapToIso(x, y)
 	var tx = (x - y) * w;
 	var ty = (x + y) * h;
 
-	/* Isometric position should be centered */
-	ty += h;
+	/* We want the bottom corner, not the top corner. */
+	ty += (this.tileSize[1] - 1);
 
-	return([ Math.round(tx), Math.round(ty) ]);
+	return([ Math.floor(tx), Math.floor(ty) ]);
 };
 
 IdleEngine.prototype.outlineTile = function outlineTile(full, x, y, color)
@@ -459,30 +462,34 @@ IdleEngine.prototype.inputLoop = function inputLoop(time)
 	this.time += 1 / (SecondsPerDay * 30);
 
 	if (idle.destination) {
+		var to = this.mapToIso(idle.destination[0], idle.destination[1]);
+
+		/* Aim towards the center */
+		to[1] -= this.tileSize[1] / 2;
+
+		/*
+			Move Idle to the specified destination, without letting the player
+			have any control until he gets there.
+		*/
 		var diff = [
-			idle.destination[0] - idle.x,
-			idle.destination[1] - idle.y
+			idle.x - to[0],
+			idle.y - to[1]
 		];
 
 		/* Limit the movement to the allowed speed */
-		if (diff[0] > speed) {
-			diff[0] = speed;
-		} else if (diff[0] < -speed) {
-			diff[0] = -speed;
-		}
+		diff[0] = Math.min(diff[0], speed);
+		diff[0] = Math.max(diff[0], -speed);
+		diff[1] = Math.min(diff[1], speed / 2);
+		diff[1] = Math.max(diff[1], -(speed / 2));
 
-		if (diff[1] > (speed / 2)) {
-			diff[1] = (speed / 2);
-		} else if (diff[1] < -(speed / 2)) {
-			diff[1] = -(speed / 2);
-		}
+		idle.x -= diff[0];
+		idle.y -= diff[1];
 
-		idle.x += diff[0];
-		idle.y += diff[1];
-
-		if (idle.x == idle.destination[0] &&
-			idle.y == idle.destination[1]
-		) {
+		/*
+			Has Idle reached the destination tile? Once his whole bounding box
+			is on the tile we can return control to the player.
+		*/
+		if (this.onTile(idle, idle.destination)) {
 			delete idle.destination;
 		}
 		return;
@@ -675,20 +682,23 @@ IdleEngine.prototype.getTimeStr = function getTimeStr(time)
 IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
 {
 	/* Where is the character coming from? */
-	var fromM		= this.isoToMap(npc.x, npc.y);
+	var fromM		= this.isoToMap(npc.x, (npc.y - npc.bounding[1] / 2));
 	var fromT		= this.getMapTile(map, fromM[0], fromM[1]);
 	var newscreen	= null;
+	var destM		= null;
 
 	/*
 		Check each corner of the character's bounding box. The box should be
 		small enough to let the character through a 1 tile gap.
+
+		Bottom center is last because that is where the character is rendered
+		from.
 	*/
 	var tolist = [
 		[ to[0] - (npc.bounding[0] / 2), to[1] ],
 		[ to[0] + (npc.bounding[0] / 2), to[1] ],
 		[ to[0], to[1] - (npc.bounding[1] / 2) ],
-		[ to[0], to[1] + (npc.bounding[1] / 2) ],
-		[ to[0], to[1] ]
+		[ to[0], to[1] + (npc.bounding[1] / 2) ]
 	];
 
 	for (var i = 0, t; t = tolist[i]; i++) {
@@ -727,6 +737,13 @@ IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
 			}
 		}
 
+		/* Check for an elevation check, see comment below */
+		if ((toM[0] != fromM[0] || toM[1] != fromM[1]) &&
+			!destM && toT && fromT && toT.elevation != fromT.elevation
+		) {
+			destM = toM.slice(0);
+		}
+
 		if (!this.debug) {
 			if (fromT) {
 				if (toT.elevation - fromT.elevation > 1) {
@@ -745,30 +762,75 @@ IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
 				}
 			}
 		}
+	}
 
-		if (newscreen) {
-			this.screen = newscreen;
+	if (newscreen) {
+		this.screen = newscreen;
 
-			/* Move him to the center of the correct tile on the new screen */
-			to = this.mapToIso(toM[0], toM[1]);
-			to[1] -= this.tileSize[1] / 2;
-		} else if (toT.elevation != fromT.elevation) {
-			/*
-				Make him move to the center of the tile to avoid standing too
-				close to the edge after passing from one tile to another.
-			*/
-			npc.destination = this.mapToIso(toM[0], toM[1]);
-			npc.destination[1] -= this.tileSize[1] / 2;
-		}
+		/* Move him to the center of the correct tile on the new screen */
+		to = this.mapToIso(toM[0], toM[1]);
+		to[1] -= this.tileSize[1] / 2;
+
+		return(to);
+	}
+
+	/*
+		Has Idle changed elevations?
+
+		If any corner of the bounding box is no longer in the same tile that
+		Idle started in, and has a different elevation then slide Idle toward
+		the center of that tile until the entire bounding box is on that tile.
+
+		This will ensure that Idle will not end up standing too close to an edge
+	*/
+	if (destM) {
+console.log('Found destination', destM);
+		npc.destination = destM;
 	}
 
 	return(to);
+};
+
+/*
+	Return true if the NPC is entirely on the specified tile, taking each corner
+	of it's bounding box into account.
+*/
+IdleEngine.prototype.onTile = function walkTo(npc, mappos)
+{
+	var list = [
+		[ npc.x - (npc.bounding[0] / 2), npc.y ],
+		[ npc.x + (npc.bounding[0] / 2), npc.y ],
+		[ npc.x, npc.y - (npc.bounding[1] / 2) ],
+		[ npc.x, npc.y + (npc.bounding[1] / 2) ]
+	];
+
+	for (var i = 0, t; t = list[i]; i++) {
+		var toM = this.isoToMap(t[0], t[1]);
+
+		if (toM[0] != mappos[0] || toM[1] != mappos[1]) {
+			return(false);
+		}
+	}
+
+	return(true);
 };
 
 IdleEngine.prototype.start = function start()
 {
 	/* Find the center of the map */
 	var iso = this.mapToIso(5, 5);
+
+	/* Sanity check to make sure I didn't screw up too horribly */
+	for (var y = -3; y <= 3; y++) {
+		for (var x = -3; x <= 3; x++) {
+			var a = this.mapToIso(x, y);
+			var b = this.isoToMap(a[0], a[1]);
+
+			if (x != b[0] || y != b[1]) {
+				console.log('OH NO', x, y, '->', a[0], a[1], '->', b[0], b[1]);
+			}
+		}
+	}
 
 	this.characters = [{
 		name:		"idle",
