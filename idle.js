@@ -60,6 +60,7 @@ function IdleEngine(canvas)
 	this.start();
 }
 
+// TODO	What do we do when we have more tiles than letters?
 IdleEngine.prototype.tiles = {
 	ground: {
 		" ": { name: "grass",	side: "elevation-soil"			},
@@ -68,6 +69,16 @@ IdleEngine.prototype.tiles = {
 		"%": { name: "rock",	side: "elevation-rock-fossil2"	},
 		"o": { name: "puddle",	side: "elevation-soil"			},
 		"O": { name: "hole",	side: "elevation-soil"			}
+
+		// TODO	Add support for interior tiles, which have 2 images and 2
+		//		elevations.
+		//
+		//		When Idle is standing on an interior tile the regular elevation
+		//		and image are used. When he is outside the secondary set is used
+		//		instead.
+		//
+		//		Perhaps both should be rendered, and the exterior version should
+		//		just be transparent when he is inside.
 	},
 
 	props: {
