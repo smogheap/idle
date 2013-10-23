@@ -75,6 +75,7 @@ IdleEngine.prototype.tiles = {
 		"|": { name: "fence-nw"									}
 	},
 
+	// TODO	Make each character class provide a list of images?
 	characters: {
 		"idle": {
 			n:	"idle-stand-north",
@@ -192,33 +193,6 @@ IdleEngine.prototype.outlineTile = function outlineTile(full, x, y, color)
 	this.ctx.restore();
 };
 
-IdleEngine.prototype.outlineBoundingBox = function outlineBoundingBox(npc, elevationOffset, color)
-{
-	this.ctx.save();
-
-	var x = npc.x;
-	var y = npc.y;
-
-	if (elevationOffset) {
-		y -= elevationOffset;
-	}
-
-	x += this.offset[0];
-	y += this.offset[1] - 1;
-
-	this.ctx.fillStyle		= color || 'rgba(255, 255, 255, 0.5)';
-	this.ctx.beginPath();
-
-	this.ctx.moveTo(x - (npc.bounding[0] / 2), y);
-	this.ctx.lineTo(x, y - (npc.bounding[1] / 2));
-	this.ctx.lineTo(x + (npc.bounding[0] / 2), y);
-	this.ctx.lineTo(x, y + (npc.bounding[1] / 2));
-	this.ctx.lineTo(x - (npc.bounding[0] / 2), y);
-
-	this.ctx.fill();
-	this.ctx.restore();
-};
-
 /* Return a tile based on the ground, elevation & props maps for this screen */
 IdleEngine.prototype.getMapTile = function getMapTile(map, x, y)
 {
@@ -323,21 +297,6 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 	/* Ground level is at an elevation of 5 */
 	var ground	= 5;
 
-	/*
-		Calculate the bottom center position of each character that is on the
-		screen and determine which tile the character is on.
-	*/
-	for (var i = 0, npc; npc = characters[i]; i++) {
-		/*
-			Calculate the map coords of the character so we know when to render
-			him/her.
-
-			The map coords should be calculated from the bottom center of the
-			character's bounding box.
-		*/
-		npc.map = this.isoToMap(npc.x, npc.y + (npc.bounding[1] / 2));
-	}
-
 	/* Set some clipping for the game area */
 	this.ctx.save();
 	this.ctx.beginPath();
@@ -428,22 +387,15 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 
 				/* Are there any characters standing on this tile? */
 				for (var i = 0, npc; npc = characters[i]; i++) {
-					if (x == npc.map[0] && y == npc.map[1]) {
+					var m = npc.getMapCoords();
+
+					if (x == m[0] && y == m[1]) {
 						if (this.debug) {
 							this.outlineTile(true, iso[0], iso[1] - eloff,
 								'rgba(0, 0, 255, 0.3)');
 						}
 
-						/*
-							Bottom center position of the character's bounding box
-						*/
-						var l = npc.x - (npc.img.width / 2);
-						var t = npc.y - (npc.img.height);
-
-						this.outlineBoundingBox(npc, eloff);
-						this.ctx.drawImage(npc.img,
-							l + this.offset[0],
-							t + this.offset[1] - eloff);
+						npc.draw(eloff);
 					}
 				}
 
@@ -475,104 +427,38 @@ IdleEngine.prototype.inputLoop = function inputLoop(time)
 	var SecondsPerDay	= 30;
 	var speed			= 2;
 	var idle			= this.characters[0];
+	var direction		= '';
 
 	/* Request next call for the input loop */
 	window.setTimeout(this.inputLoop.bind(this), 33);
 
 	this.time += 1 / (SecondsPerDay * 30);
 
-	if (idle.destination) {
-		var to = this.mapToIso(idle.destination[0], idle.destination[1]);
-
-		/* Aim towards the center */
-		to[1] -= this.tileSize[1] / 2;
-
-		/*
-			Move Idle to the specified destination, without letting the player
-			have any control until he gets there.
-		*/
-		var diff = [
-			idle.x - to[0],
-			idle.y - to[1]
-		];
-
-		/* Limit the movement to the allowed speed */
-		diff[0] = Math.min(diff[0], speed);
-		diff[0] = Math.max(diff[0], -speed);
-		diff[1] = Math.min(diff[1], speed / 2);
-		diff[1] = Math.max(diff[1], -(speed / 2));
-
-		idle.x -= diff[0];
-		idle.y -= diff[1];
-
-		/*
-			Has Idle reached the destination tile? Once his whole bounding box
-			is on the tile we can return control to the player.
-		*/
-		if (this.onTile(idle, idle.destination)) {
-			delete idle.destination;
-		}
-		return;
-	}
-
 	/* Update the character image based on the direction he is facing */
 	if (this.keys.left || this.keys.right || this.keys.up || this.keys.down) {
-		var img = 'idle-stand-';
-
 		if (this.keys.up && !this.keys.down) {
-			img += 'north';
+			direction += 'north';
 		} else if (this.keys.down && !this.keys.up) {
-			img += 'south';
+			direction += 'south';
 		}
 
 		if (this.keys.left && !this.keys.right) {
-			img += 'west';
+			direction += 'west';
 		} else if (this.keys.right && !this.keys.left) {
-			img += 'east';
-		}
-
-		idle.img = this.getImage(img);
-	}
-
-	/* Move Idle left or right based on keyboard input */
-	var dist = 0;
-	var to;
-
-	if (this.keys.right) {
-		dist += speed;
-	}
-	if (this.keys.left) {
-		dist -= speed;
-	}
-	if (dist) {
-		/* Try to move Idle over by dist */
-		if ((to = this.walkTo(idle, this.getMap(), [ idle.x + dist, idle.y ]))) {
-			/* Yup, all good */
-			idle.x = to[0];
-			idle.y = to[1];
-		}
-
-		if (idle.destination) {
-			return;
+			direction += 'east';
 		}
 	}
 
-	/* Move Idle up or down based on keyboard input */
-	dist = 0;
+	if (!direction.length) {
+		direction = null;
+	}
 
-	if (this.keys.up) {
-		dist -= speed / 2;
-	}
-	if (this.keys.down) {
-		dist += speed / 2;
-	}
-	if (dist) {
-		/* Try to move Idle up/down by dist */
-		if ((to = this.walkTo(idle, this.getMap(), [ idle.x, idle.y + dist ]))) {
-			/* Yup, all good */
-			idle.x = to[0];
-			idle.y = to[1];
-		}
+	/*
+		Ask the characters to move. If the character happens to be Idle then
+		tell him to face that direction and move in that direction.
+	*/
+	for (var i = 0, c; c = this.characters[i]; i++) {
+		c.move(i == 0 ? direction : null, i == 0 ? direction : null);
 	}
 };
 
@@ -702,165 +588,6 @@ IdleEngine.prototype.getTimeStr = function getTimeStr(time)
 	return(str);
 };
 
-/*
-	Based on a characters coords (iso, not map) determine if the character is
-	allowed to move from one spot to another.
-
-	If allowed then return the coordinates that the character ends up on.
-*/
-IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
-{
-	/* Where is the character coming from? */
-	var fromM		= this.isoToMap(npc.x, (npc.y - npc.bounding[1] / 2));
-	var fromT		= this.getMapTile(map, fromM[0], fromM[1]);
-	var newscreen	= null;
-	var destM		= null;
-
-	/*
-		Check each corner of the character's bounding box. The box should be
-		small enough to let the character through a 1 tile gap.
-
-		Bottom center is last because that is where the character is rendered
-		from.
-	*/
-	var tolist = [
-		[ to[0] - (npc.bounding[0] / 2), to[1] ],
-		[ to[0] + (npc.bounding[0] / 2), to[1] ],
-		[ to[0], to[1] - (npc.bounding[1] / 2) ],
-		[ to[0], to[1] + (npc.bounding[1] / 2) ]
-	];
-
-	for (var i = 0, t; t = tolist[i]; i++) {
-		var toM = this.isoToMap(t[0], t[1]);
-		var toT = this.getMapTile(map, toM[0], toM[1]);
-
-		/* Only the last check can actually change the screen */
-		newscreen = null;
-
-		if (!toT) {
-			// TODO	Determine which map he should be walking to.
-			newscreen	= [ 0, 1 ];
-
-			map = this.getMap(newscreen.toString());
-
-			if (!map && this.debug) {
-				// TODO	Create a new map
-			}
-
-			if (map) {
-				while (toM[1] < 0) {
-					toM[1] += map.ground.length;
-				}
-				toM[1] %= map.ground.length;
-
-				while (toM[0] < 0) {
-					toM[0] += map.ground[toM[1]].length;
-				}
-				toM[0] %= map.ground[toM[1]].length;
-
-				toT = this.getMapTile(map, toM[0], toM[1]);
-			}
-
-			if (!toT) {
-				return(null);
-			}
-		}
-
-		/*
-			Check for an elevation check, see comment below
-
-			The destination must NOT be on a different screen.
-		*/
-		if ((toM[0] != fromM[0] || toM[1] != fromM[1]) &&
-			!newscreen && toT && fromT && toT.elevation != fromT.elevation
-		) {
-			/* Don't allow corner to corner moves across elevations */
-			if (toM[0] != fromM[0] && toM[1] != fromM[1]) {
-				return(null);
-			}
-
-			/* If there is a conflict about which tile to go to, then don't */
-			if (destM && (destM[0] != toM[0] || destM[1] != toM[1])) {
-				return(null);
-			}
-
-			if (!destM) {
-				destM = toM.slice(0);
-			}
-		}
-
-		if (!this.debug) {
-			if (fromT) {
-				if (toT.elevation - fromT.elevation > 1) {
-					/* He can't climb something that steep */
-					return(null);
-				}
-
-				if (fromT.elevation - toT.elevation > 2) {
-					/* We wouldn't want him to hurt himself */
-					return(null);
-				}
-
-				if (toT.prop) {
-					/* He shouldn't walk into things, that would hurt */
-					return(null);
-				}
-			}
-		}
-	}
-
-	if (newscreen) {
-		this.screen = newscreen;
-
-		/* Move him to the center of the correct tile on the new screen */
-		to = this.mapToIso(toM[0], toM[1]);
-		to[1] -= this.tileSize[1] / 2;
-
-		delete npc.destination;
-		return(to);
-	}
-
-	/*
-		Has Idle changed elevations?
-
-		If any corner of the bounding box is no longer in the same tile that
-		Idle started in, and has a different elevation then slide Idle toward
-		the center of that tile until the entire bounding box is on that tile.
-
-		This will ensure that Idle will not end up standing too close to an edge
-	*/
-	if (destM) {
-		npc.destination = destM;
-		return([ npc.x, npc.y ]);
-	}
-
-	return(to);
-};
-
-/*
-	Return true if the NPC is entirely on the specified tile, taking each corner
-	of it's bounding box into account.
-*/
-IdleEngine.prototype.onTile = function walkTo(npc, mappos)
-{
-	var list = [
-		[ npc.x - (npc.bounding[0] / 2), npc.y ],
-		[ npc.x + (npc.bounding[0] / 2), npc.y ],
-		[ npc.x, npc.y - (npc.bounding[1] / 2) ],
-		[ npc.x, npc.y + (npc.bounding[1] / 2) ]
-	];
-
-	for (var i = 0, t; t = list[i]; i++) {
-		var toM = this.isoToMap(t[0], t[1]);
-
-		if (toM[0] != mappos[0] || toM[1] != mappos[1]) {
-			return(false);
-		}
-	}
-
-	return(true);
-};
-
 IdleEngine.prototype.start = function start()
 {
 	/* Find the center of the map */
@@ -878,16 +605,10 @@ IdleEngine.prototype.start = function start()
 		}
 	}
 
-	this.characters = [{
-		name:		"idle",
-		x:			iso[0],
-		y:			iso[1] - this.tileSize[1] / 2,
-
-		img:		this.getImage('idle-stand-east'),
-
-		/* The size of the character's bounding box in isometric space */
-		bounding:	[ 16, 8 ]
-	}];
+	/* Idle is always the first character in the list */
+	this.characters = [
+		new IdleCharacter("idle", iso[0], iso[1] - this.tileSize[1] / 2, this)
+	];
 
 	this.keys = {};
 
