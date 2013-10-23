@@ -246,15 +246,27 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 		newscreen = null;
 
 		if (!toT) {
-			// TODO	Determine which map he should be walking to.
 			var newmap;
 
-			newscreen	= [ 0, 1 ];
+			newscreen = this.engine.screen.slice(0);
 
-			newmap = this.engine.getMap(newscreen.toString());
+			if (toM[1] < 0) {
+				newscreen[1]--;
+			} else if (toM[1] >= map.ground.length) {
+				newscreen[1]++;
+			} else if (toM[0] < 0) {
+				newscreen[0]--;
+			} else if (toM[0] >= map.ground.length) {
+				newscreen[0]++;
+			}
 
-			if (!newmap && this.engine.debug) {
-				// TODO	Create a new map
+			console.log('Changing screens: ', this.engine.screen, '->', newscreen);
+			if (!(newmap = this.engine.getMap(newscreen.toString()))) {
+				if (this.engine.debug) {
+					// TODO	Create a new map
+				} else {
+					newscreen = null;
+				}
 			}
 
 			if (newmap) {
