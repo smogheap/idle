@@ -409,16 +409,14 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 		}
 	}
 
+	this.ctx.restore();
+
 	/*
 		Draw over everything as a rather weak way of changing the time of day.
 		It isn't elegant, but it works reasonably well.
-
-		This mask assumes a 20x20 screen.
 	*/
 	this.ctx.fillStyle = this.getTimeColor(this.time);
 	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-	this.ctx.restore();
 };
 
 IdleEngine.prototype.inputLoop = function inputLoop(time)
