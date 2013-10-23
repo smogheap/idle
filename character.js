@@ -231,26 +231,28 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 
 		if (!toT) {
 			// TODO	Determine which map he should be walking to.
+			var newmap;
+
 			newscreen	= [ 0, 1 ];
 
-			map = this.engine.getMap(newscreen.toString());
+			newmap = this.engine.getMap(newscreen.toString());
 
-			if (!map && this.engine.debug) {
+			if (!newmap && this.engine.debug) {
 				// TODO	Create a new map
 			}
 
-			if (map) {
+			if (newmap) {
 				while (toM[1] < 0) {
-					toM[1] += map.ground.length;
+					toM[1] += newmap.ground.length;
 				}
-				toM[1] %= map.ground.length;
+				toM[1] %= newmap.ground.length;
 
 				while (toM[0] < 0) {
-					toM[0] += map.ground[toM[1]].length;
+					toM[0] += newmap.ground[toM[1]].length;
 				}
-				toM[0] %= map.ground[toM[1]].length;
+				toM[0] %= newmap.ground[toM[1]].length;
 
-				toT = this.engine.getMapTile(map, toM[0], toM[1]);
+				toT = this.engine.getMapTile(newmap, toM[0], toM[1]);
 			}
 
 			if (!toT) {
