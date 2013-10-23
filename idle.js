@@ -306,17 +306,16 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 	var w = map.ground.length / 2;
 
 	this.ctx.moveTo(x, y - 3 - (this.tileSize[1] * 4));
-	this.ctx.lineTo(x + (w * this.tileSize[0]) + 3,
-					y + (w * this.tileSize[1]) - (this.tileSize[1] * 4));
+	this.ctx.lineTo(x + (w * this.tileSize[0]) + 3, 0);
 	this.ctx.lineTo(x + (w * this.tileSize[0]) + 3,
 					y + (w * this.tileSize[1]) + (this.tileSize[1] * 1));
 	this.ctx.lineTo(x,
 					y + (w * 2 * this.tileSize[1]) + 3 + (this.tileSize[1] * 1));
 	this.ctx.lineTo(x - (w * this.tileSize[0]) - 3,
 					y + (w * this.tileSize[1]) + (this.tileSize[1] * 1));
-	this.ctx.lineTo(x - (w * this.tileSize[0]) - 3,
-					y + (w * this.tileSize[1]) - (this.tileSize[1] * 4));
+	this.ctx.lineTo(x - (w * this.tileSize[0]) - 3, 0);
 	this.ctx.lineTo(x, y - 3 - (this.tileSize[1] * 4));
+
 	this.ctx.clip();
 
 	var tile;
