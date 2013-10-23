@@ -251,13 +251,13 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 			newscreen = this.engine.screen.slice(0);
 
 			if (toM[1] < 0) {
-				newscreen[1]--;
-			} else if (toM[1] >= map.ground.length) {
 				newscreen[1]++;
+			} else if (toM[1] >= map.ground.length) {
+				newscreen[1]--;
 			} else if (toM[0] < 0) {
-				newscreen[0]--;
-			} else if (toM[0] >= map.ground.length) {
 				newscreen[0]++;
+			} else if (toM[0] >= map.ground.length) {
+				newscreen[0]--;
 			}
 
 			console.log('Changing screens: ', this.engine.screen, '->', newscreen);
