@@ -434,6 +434,10 @@ IdleEngine.prototype.inputLoop = function inputLoop(time)
 
 	this.time += 1 / (SecondsPerDay * 30);
 
+	if (this.mouseupdate) {
+		this.mouseupdate();
+	}
+
 	/* Update the character image based on the direction he is facing */
 	if (this.keys.left || this.keys.right || this.keys.up || this.keys.down) {
 		if (this.keys.up && !this.keys.down) {
@@ -773,6 +777,109 @@ window.addEventListener('keypress', function(event)
 			}
 		}
 	}
+}, false);
+
+window.addEventListener('load', function()
+{
+	var c		= document.getElementById('game');
+	var body	= c.parentNode;
+	var mouse	= {
+		x:		-1,
+		y:		-1,
+
+		move: function(ev) {
+			if (ev.touches && ev.touches.length > 0) {
+				this.x = ev.touches[0].screenX;
+				this.y = ev.touches[0].screenY;
+			} else {
+				this.x = ev.pageX;
+				this.y = ev.pageY;
+			}
+
+			this.update();
+		},
+
+		update: function() {
+			var e = c.engine;
+
+			if (!this.down) {
+				return;
+			}
+
+			/* Reset all keys */
+			e.keys.up		= false;
+			e.keys.right	= false;
+			e.keys.down		= false;
+			e.keys.left		= false;
+
+			/*
+				Determine what the mouse position would be on the internal
+				canvas, not the display canvas.
+			*/
+			var x = this.x;
+			var y = this.y;
+
+			x -= (e.display.canvas.width / 2) - ((e.width * e.scale) / 2);
+			y -= (e.display.canvas.height / 2) - ((e.height * e.scale) / 2);
+
+			x = x / e.scale;
+			y = y / e.scale;
+			// console.log(x, y);
+
+			/* Determine the direction the mouse is relative to Idle */
+			var dx = x - (e.characters[0].x + e.offset[0]);
+			var dy = y - (e.characters[0].y + e.offset[1] -
+							e.characters[0].elevationOffset);
+
+			if (Math.abs(dx) > Math.abs(dy) * 2 || Math.abs(dy) < 10) {
+				dy = 0;
+			}
+			if (Math.abs(dy) > Math.abs(dx) * 2 || Math.abs(dx) < 10) {
+				dx = 0;
+			}
+
+			// console.log(dx, dy);
+
+			if (dx > 0) e.keys.right	= true;
+			if (dx < 0) e.keys.left		= true;
+			if (dy < 0) e.keys.up		= true;
+			if (dy > 0) e.keys.down		= true;
+		},
+
+		down: function(ev) {
+			var e = c.engine;
+
+			e.mouseupdate = this.update.bind(this);
+
+			this.down = true;
+			this.move(ev);
+		},
+
+		up: function(ev) {
+			var e = c.engine;
+
+			this.move(ev);
+			this.down		= false;
+
+			/* Reset all keys on mouse up */
+			e.keys.up		= false;
+			e.keys.right	= false;
+			e.keys.down		= false;
+			e.keys.left		= false;
+		}
+	};
+
+	if ('ontouchstart' in window) {
+		body.addEventListener('touchstart',	mouse.down.bind(mouse));
+		body.addEventListener('touchend',	mouse.up.bind(mouse));
+		body.addEventListener('touchmove',	mouse.move.bind(mouse));
+	} else {
+		body.addEventListener('mousedown',	mouse.down.bind(mouse));
+		body.addEventListener('mouseup',	mouse.up.bind(mouse));
+		body.addEventListener('mousemove',	mouse.move.bind(mouse));
+	}
+
+	mouse.down = false;
 }, false);
 
 (function() {

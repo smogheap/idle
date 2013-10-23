@@ -49,6 +49,8 @@ IdleCharacter.prototype.draw = function draw(elevationOffset)
 	var x	= this.x - (img.width / 2);
 	var y	= this.y - img.height;
 
+	this.elevationOffset = elevationOffset;
+
 	this.engine.ctx.drawImage(img,
 		x + this.engine.offset[0],
 		y + this.engine.offset[1] - elevationOffset);
