@@ -222,7 +222,7 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 	var fromM		= this.engine.isoToMap(this.x, (this.y - this.bounding[1] / 2));
 	var fromT		= this.engine.getMapTile(map, fromM[0], fromM[1]);
 	var newscreen	= null;
-	var destM		= null;
+	var destination	= [];
 
 	/*
 		Check each corner of the character's bounding box. The box should be
@@ -289,26 +289,14 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 		}
 
 		/*
-			Check for an elevation check, see comment below
-
-			The destination must NOT be on a different screen.
+			Keep track of any changes to elevation that would be caused by this
+			move for any one point.
 		*/
-		if ((toM[0] != fromM[0] || toM[1] != fromM[1]) &&
-			!newscreen && toT && fromT && toT.elevation != fromT.elevation
-		) {
-			/* Don't allow corner to corner moves across elevations */
-			if (toM[0] != fromM[0] && toM[1] != fromM[1]) {
-				return(null);
-			}
-
-			/* If there is a conflict about which tile to go to, then don't */
-			if (destM && (destM[0] != toM[0] || destM[1] != toM[1])) {
-				return(null);
-			}
-
-			if (!destM) {
-				destM = toM.slice(0);
-			}
+		if (!newscreen && toT && fromT && toT.elevation != fromT.elevation) {
+			destination.push({
+				map:	toM.slice(0),
+				tile:	toT
+			});
 		}
 
 		if (!this.engine.debug) {
@@ -343,16 +331,49 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 	}
 
 	/*
-		Has Idle changed elevations?
+		Has Idle's elevation changed?
 
 		If any corner of the bounding box is no longer in the same tile that
-		Idle started in, and has a different elevation then slide Idle toward
-		the center of that tile until the entire bounding box is on that tile.
+		Idle started in and has a different elevation then Idle needs to be
+		nudged away from the edge.
 
-		This will ensure that Idle will not end up standing too close to an edge
+		If there are 3 elevations involved them don't allow him to move.
 	*/
-	if (destM) {
-		this.destination = destM;
+	if (destination.length) {
+		/*
+			Out of all the possible tiles to go to figure out the best match,
+			which is the first that is not connected at a corner.
+		*/
+		var match = null;
+
+		for (var i = 0, d; d = destination[i]; i++) {
+			if (d.map[0] == fromM[0] || d.map[1] == fromM[1]) {
+				/* Not connected at a corner */
+				match = d;
+				break;
+			}
+		}
+
+		if (!match) {
+			/*
+				All matches are connected by a corner.
+
+				Disable the x movement and let the character slide on the y axis
+				and the next time around he should be able to move.
+
+				The choice of x vs y is arbitrary here...
+			*/
+			return([ this.x, to[1] ]);
+		}
+
+		for (var i = 0, d; d = destination[i]; i++) {
+			if (d.tile.elevation != match.tile.elevation) {
+				/* 3 elevations involved, not a good idea */
+				return(null);
+			}
+		}
+
+		this.destination = match.map;
 		return([ this.x, this.y ]);
 	}
 
