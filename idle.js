@@ -515,51 +515,60 @@ IdleEngine.prototype.inputLoop = function inputLoop(time)
 		return;
 	}
 
-	/* Move idle based on keyboard input */
+	/* Update the character image based on the direction he is facing */
 	if (this.keys.left || this.keys.right || this.keys.up || this.keys.down) {
-		var x	= idle.x;
-		var y	= idle.y;
+		var img = 'idle-stand-';
 
-		if (this.keys.left) {
-			if (this.keys.up) {
-				idle.img = this.getImage('idle-stand-northwest');
-			} else if (this.keys.down) {
-				idle.img = this.getImage('idle-stand-southwest');
-			} else {
-				idle.img = this.getImage('idle-stand-west');
-			}
-		} else if (this.keys.right) {
-			if (this.keys.up) {
-				idle.img = this.getImage('idle-stand-northeast');
-			} else if (this.keys.down) {
-				idle.img = this.getImage('idle-stand-southeast');
-			} else {
-				idle.img = this.getImage('idle-stand-east');
-			}
-		} else if (this.keys.up) {
-			idle.img = this.getImage('idle-stand-north');
-		} else if (this.keys.down) {
-			idle.img = this.getImage('idle-stand-south');
+		if (this.keys.up && !this.keys.down) {
+			img += 'north';
+		} else if (this.keys.down && !this.keys.up) {
+			img += 'south';
 		}
 
-		if (this.keys.left) {
-			x -= speed;
-		}
-		if (this.keys.right) {
-			x += speed;
-		}
-
-		/* Vertical speed is half horizontal due to the isometric display */
-		if (this.keys.up) {
-			y -= speed / 2;
-		}
-		if (this.keys.down) {
-			y += speed / 2;
+		if (this.keys.left && !this.keys.right) {
+			img += 'west';
+		} else if (this.keys.right && !this.keys.left) {
+			img += 'east';
 		}
 
-		var to;
+		idle.img = this.getImage(img);
+	}
 
-		if ((to = this.walkTo(idle, this.getMap(), [ x, y ]))) {
+	/* Move Idle left or right based on keyboard input */
+	var dist = 0;
+	var to;
+
+	if (this.keys.right) {
+		dist += speed;
+	}
+	if (this.keys.left) {
+		dist -= speed;
+	}
+	if (dist) {
+		/* Try to move Idle over by dist */
+		if ((to = this.walkTo(idle, this.getMap(), [ idle.x + dist, idle.y ]))) {
+			/* Yup, all good */
+			idle.x = to[0];
+			idle.y = to[1];
+		}
+
+		if (idle.destination) {
+			return;
+		}
+	}
+
+	/* Move Idle up or down based on keyboard input */
+	dist = 0;
+
+	if (this.keys.up) {
+		dist -= speed / 2;
+	}
+	if (this.keys.down) {
+		dist += speed / 2;
+	}
+	if (dist) {
+		/* Try to move Idle up/down by dist */
+		if ((to = this.walkTo(idle, this.getMap(), [ idle.x, idle.y + dist ]))) {
 			/* Yup, all good */
 			idle.x = to[0];
 			idle.y = to[1];
@@ -763,9 +772,21 @@ IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
 			The destination must NOT be on a different screen.
 		*/
 		if ((toM[0] != fromM[0] || toM[1] != fromM[1]) &&
-			!newscreen && !destM && toT && fromT && toT.elevation != fromT.elevation
+			!newscreen && toT && fromT && toT.elevation != fromT.elevation
 		) {
-			destM = toM.slice(0);
+			/* Don't allow corner to corner moves across elevations */
+			if (toM[0] != fromM[0] && toM[1] != fromM[1]) {
+				return(null);
+			}
+
+			/* If there is a conflict about which tile to go to, then don't */
+			if (destM && (destM[0] != toM[0] || destM[1] != toM[1])) {
+				return(null);
+			}
+
+			if (!destM) {
+				destM = toM.slice(0);
+			}
 		}
 
 		if (!this.debug) {
@@ -810,6 +831,7 @@ IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
 	*/
 	if (destM) {
 		npc.destination = destM;
+		return([ npc.x, npc.y ]);
 	}
 
 	return(to);
