@@ -363,76 +363,96 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 	var tile;
 
 	/*
-		Render each row in 2 passes, one for the ground at elevation (and sides)
-		and another for the characters and props.
+		Render each row from lowest elevation to highest elevation.
+
+		For each elevation render the ground (and walls) first, then a second
+		pass for characters and props.
+
+		This ensures that a character or prop will be above the ground, but
+		behind anything that is at a higher elevation.
 	*/
 	for (var row = 0; row < map.ground.length * 4; row++) {
-		/* First pass for ground */
+		var elmax	= 0x0;
+		var elmin	= 0xf;
+
+		/* First pass to determine the highest and lowest points of the row */
 		for (var x = 0, y = row; x <= row; y--, x++) {
 			if (!(tile = this.getMapTile(map, x, y))) {
 				continue;
 			}
 
-			/* Calculate isometric coords */
-			var iso = this.mapToIso(x, y);
-
-			/* Calculate the elevation offset for this pass */
-			var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
-
-			if (tile.side) {
-				this.ctx.drawImage(tile.side,
-					iso[0] + this.offset[0] - (tile.side.width / 2),
-					iso[1] + this.offset[1] - (this.tileSize[1] / 2) - eloff);
-			}
-
-			this.ctx.drawImage(tile.img,
-				iso[0] + this.offset[0] - (tile.img.width / 2),
-				iso[1] + this.offset[1] - tile.img.height - eloff);
-
-			if (this.debug) {
-				this.outlineTile(false, iso[0], iso[1] - eloff,
-						'rgba(0, 0, 0, 0.6)');
-			}
+			elmax = Math.max(elmax, tile.elevation);
+			elmin = Math.min(elmin, tile.elevation);
 		}
 
-		/* 2nd pass for characters and props */
-		for (var x = 0, y = row; x <= row; y--, x++) {
-			if (!(tile = this.getMapTile(map, x, y))) {
-				continue;
-			}
+		for (var el = elmin; el <= elmax; el++) {
+			/* Render the ground and walls */
+			for (var x = 0, y = row; x <= row; y--, x++) {
+				if (!(tile = this.getMapTile(map, x, y)) || tile.elevation != el) {
+					continue;
+				}
 
-			/* Calculate isometric coords */
-			var iso = this.mapToIso(x, y);
+				/* Calculate isometric coords */
+				var iso = this.mapToIso(x, y);
 
-			/* Calculate the elevation offset for this pass */
-			var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
+				/* Calculate the elevation offset for this pass */
+				var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
 
-			/* Are there any characters standing on this tile? */
-			for (var i = 0, npc; npc = characters[i]; i++) {
-				if (x == npc.map[0] && y == npc.map[1]) {
-					if (this.debug) {
-						this.outlineTile(true, iso[0], iso[1] - eloff,
-							'rgba(0, 0, 255, 0.3)');
-					}
+				if (tile.side) {
+					this.ctx.drawImage(tile.side,
+						iso[0] + this.offset[0] - (tile.side.width / 2),
+						iso[1] + this.offset[1] - (this.tileSize[1] / 2) - eloff);
+				}
 
-					/*
-						Bottom center position of the character's bounding box
-					*/
-					var l = npc.x - (npc.img.width / 2);
-					var t = npc.y - (npc.img.height);
+				this.ctx.drawImage(tile.img,
+					iso[0] + this.offset[0] - (tile.img.width / 2),
+					iso[1] + this.offset[1] - tile.img.height - eloff);
 
-					this.outlineBoundingBox(npc, eloff);
-					this.ctx.drawImage(npc.img,
-						l + this.offset[0],
-						t + this.offset[1] - eloff);
+				if (this.debug) {
+					this.outlineTile(false, iso[0], iso[1] - eloff,
+							'rgba(0, 0, 0, 0.6)');
 				}
 			}
 
-			/* Render any props for this tile */
-			if (tile.prop) {
-				this.ctx.drawImage(tile.prop,
-					iso[0] + this.offset[0] - (tile.prop.width / 2),
-					iso[1] + this.offset[1] - tile.prop.height - eloff);
+			/* Render characters and props */
+			for (var x = 0, y = row; x <= row; y--, x++) {
+				if (!(tile = this.getMapTile(map, x, y)) || tile.elevation != el) {
+					continue;
+				}
+
+				/* Calculate isometric coords */
+				var iso = this.mapToIso(x, y);
+
+				/* Calculate the elevation offset for this pass */
+				var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
+
+				/* Are there any characters standing on this tile? */
+				for (var i = 0, npc; npc = characters[i]; i++) {
+					if (x == npc.map[0] && y == npc.map[1]) {
+						if (this.debug) {
+							this.outlineTile(true, iso[0], iso[1] - eloff,
+								'rgba(0, 0, 255, 0.3)');
+						}
+
+						/*
+							Bottom center position of the character's bounding box
+						*/
+						var l = npc.x - (npc.img.width / 2);
+						var t = npc.y - (npc.img.height);
+
+						this.outlineBoundingBox(npc, eloff);
+						this.ctx.drawImage(npc.img,
+							l + this.offset[0],
+							t + this.offset[1] - eloff);
+					}
+				}
+
+				/* Render any props for this tile */
+				if (tile.prop) {
+					this.ctx.drawImage(tile.prop,
+						iso[0] + this.offset[0] - (tile.prop.width / 2),
+						iso[1] + this.offset[1] - tile.prop.height - eloff);
+				}
 			}
 		}
 	}
@@ -737,9 +757,13 @@ IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
 			}
 		}
 
-		/* Check for an elevation check, see comment below */
+		/*
+			Check for an elevation check, see comment below
+
+			The destination must NOT be on a different screen.
+		*/
 		if ((toM[0] != fromM[0] || toM[1] != fromM[1]) &&
-			!destM && toT && fromT && toT.elevation != fromT.elevation
+			!newscreen && !destM && toT && fromT && toT.elevation != fromT.elevation
 		) {
 			destM = toM.slice(0);
 		}
@@ -771,6 +795,7 @@ IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
 		to = this.mapToIso(toM[0], toM[1]);
 		to[1] -= this.tileSize[1] / 2;
 
+		delete npc.destination;
 		return(to);
 	}
 
@@ -784,7 +809,6 @@ IdleEngine.prototype.walkTo = function walkTo(npc, map, to)
 		This will ensure that Idle will not end up standing too close to an edge
 	*/
 	if (destM) {
-console.log('Found destination', destM);
 		npc.destination = destM;
 	}
 
