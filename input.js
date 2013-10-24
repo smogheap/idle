@@ -118,7 +118,7 @@ window.addEventListener('keypress', function(event)
 
 		/* Get the tile the character is standing on */
 		if (s) {
-			var m = e.isoToMap(e.characters[0].x, e.characters[0].y);
+			var m = e.characters[0].getMapCoords();
 
 			if (s == ' ' && event.shiftKey) {
 				/* Reset the world when shift+space is pressed */
