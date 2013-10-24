@@ -571,6 +571,9 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 
 		ctx.save();
 
+		ctx.font = '15pt Arial';
+		ctx.fillStyle = 'rgb(255, 255, 255)';
+
 		for (var t = 0, type; type = types[t]; t++) {
 			var keys	= Object.keys(this.tiles[type]);
 
@@ -578,8 +581,6 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 				var tile = this.tiles[type][key];
 				var img;
 
-				ctx.font = '15pt Arial';
-				ctx.fillStyle = 'rgb(255, 255, 255)';
 				ctx.fillText(key, x + 9, canvas.height - 65);
 
 				if (tile.side && (img = this.getImage(tile.side))) {
@@ -597,6 +598,9 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 				x += 46;
 			}
 		}
+
+		ctx.fillText("+- Adjust Height", x, canvas.height - 15);
+
 		ctx.restore();
 
 		/* Restore the original render options */
