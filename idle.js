@@ -321,6 +321,47 @@ IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
 	}
 };
 
+IdleEngine.prototype.renderTile = function renderTile(tile, iso, ctx)
+{
+	/* Ground level is at an elevation of 5 */
+	var ground	= 5;
+	var img;
+
+	if (isNaN(tile.elevation)) {
+		tile.elevation = ground;
+	}
+
+	/* Calculate the elevation offset for this pass */
+	var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
+
+	if (tile.side) {
+		if (typeof tile.side === "string") {
+			img = this.getImage(tile.side);
+		} else {
+			img = tile.side;
+		}
+
+		ctx.drawImage(img,
+			iso[0] + this.offset[0] - (img.width / 2),
+			iso[1] + this.offset[1] - (this.tileSize[1] / 2) - eloff);
+	}
+
+	if (tile.img) {
+		img = tile.img;
+	} else {
+		img = this.getImage(tile.name);
+	}
+
+	ctx.drawImage(img,
+		iso[0] + this.offset[0] - (img.width / 2),
+		iso[1] + this.offset[1] - img.height - eloff);
+
+	if (this.debug) {
+		this.outlineTile(false, iso[0], iso[1] - eloff,
+				'rgba(0, 0, 0, 0.6)', ctx);
+	}
+};
+
 IdleEngine.prototype.renderMap = function renderMap(map, characters, ctx)
 {
 	/* Ground level is at an elevation of 5 */
@@ -384,23 +425,7 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters, ctx)
 				/* Calculate isometric coords */
 				var iso = this.mapToIso(x, y);
 
-				/* Calculate the elevation offset for this pass */
-				var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
-
-				if (tile.side) {
-					ctx.drawImage(tile.side,
-						iso[0] + this.offset[0] - (tile.side.width / 2),
-						iso[1] + this.offset[1] - (this.tileSize[1] / 2) - eloff);
-				}
-
-				ctx.drawImage(tile.img,
-					iso[0] + this.offset[0] - (tile.img.width / 2),
-					iso[1] + this.offset[1] - tile.img.height - eloff);
-
-				if (this.debug) {
-					this.outlineTile(false, iso[0], iso[1] - eloff,
-							'rgba(0, 0, 0, 0.6)', ctx);
-				}
+				this.renderTile(tile, iso, ctx);
 			}
 
 			/* Render characters and props */
@@ -566,7 +591,7 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 		}
 
 		/* Render an editor legend */
-		var x			= 5;
+		var x			= 15;
 		var types		= [ "ground", "props" ];
 
 		ctx.save();
@@ -574,6 +599,7 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 		ctx.font = '15pt Arial';
 		ctx.fillStyle = 'rgb(255, 255, 255)';
 
+		this.offset = [ 0, 0 ];
 		for (var t = 0, type; type = types[t]; t++) {
 			var keys	= Object.keys(this.tiles[type]);
 
@@ -581,19 +607,9 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 				var tile = this.tiles[type][key];
 				var img;
 
-				ctx.fillText(key, x + 9, canvas.height - 65);
+				ctx.fillText(key, x - 5, canvas.height - 65);
 
-				if (tile.side && (img = this.getImage(tile.side))) {
-					ctx.drawImage(img, x, canvas.height - 36);
-				}
-
-				if (tile.name && (img = this.getImage(tile.name))) {
-					ctx.drawImage(img, x, canvas.height - 60);
-				}
-
-				// TODO	Draw text: key
-				// TODO	Draw this.getImage(tile.side)
-				// TODO Draw this.getImage(tile.name)
+				this.renderTile(tile, [ x, canvas.height - 40 ], ctx);
 
 				x += 46;
 			}
