@@ -60,47 +60,6 @@ function IdleEngine(canvas)
 	this.start();
 }
 
-// TODO	What do we do when we have more tiles than letters?
-IdleEngine.prototype.tiles = {
-	ground: {
-		" ": { name: "grass",	side: "elevation-soil"			},
-		"_": { name: "grass",	side: "elevation-soil-fossil1"	},
-		"#": { name: "rock",	side: "elevation-rock"			},
-		"%": { name: "rock",	side: "elevation-rock-fossil2"	},
-		"o": { name: "puddle",	side: "elevation-soil"			},
-		"O": { name: "hole",	side: "elevation-soil"			}
-
-		// TODO	Add support for interior tiles, which have 2 images and 2
-		//		elevations.
-		//
-		//		When Idle is standing on an interior tile the regular elevation
-		//		and image are used. When he is outside the secondary set is used
-		//		instead.
-		//
-		//		Perhaps both should be rendered, and the exterior version should
-		//		just be transparent when he is inside.
-	},
-
-	props: {
-		"-": { name: "fence-ne"									},
-		"|": { name: "fence-nw"									}
-	},
-
-	// TODO	Make each character class provide a list of images?
-	characters: {
-		"idle": {
-			n:	"idle-stand-north",
-			ne:	"idle-stand-northeast",
-			e:	"idle-stand-east",
-			se:	"idle-stand-southeast",
-			s:	"idle-stand-south",
-			sw:	"idle-stand-southwest",
-			w:	"idle-stand-west",
-			nw:	"idle-stand-northwest"
-		}
-	}
-};
-
 IdleEngine.prototype.getMap = function getMap(screen)
 {
 	var map;
@@ -223,16 +182,22 @@ IdleEngine.prototype.outlineTile = function outlineTile(full, x, y, color, ctx)
 };
 
 /* Return a tile based on the ground, elevation & props maps for this screen */
-IdleEngine.prototype.getMapTile = function getMapTile(map, x, y)
+IdleEngine.prototype.getMapTile = function getMapTile(map, x, y, tileDefinition)
 {
-	var tile = {};
+	var tile	= {};
+	var t		= null;
 	var line;
 	var c;
-	var t;
 
 	/* Get the ground and side tile from the first map */
 	if ((line = map.ground[y]) && (c = line.charAt(x)) && c.length == 1) {
-		if ((t = this.tiles.ground[c])) {
+		if (!(t = tileDefinition)) {
+			t = world.tiles.ground[c];
+		}
+
+		if (t) {
+			tile.solid = t.solid;
+
 			if (t.name) {
 				tile.img = this.getImage(t.name);
 			}
@@ -258,13 +223,21 @@ IdleEngine.prototype.getMapTile = function getMapTile(map, x, y)
 		tile.elevation = 5;
 	}
 
+	if (t && t.height) {
+		tile.elevation += t.height;
+	}
+
 	/* Is there a prop on this tile? */
 	if ((line = map.props[y]) && (c = line.charAt(x)) && c.length == 1) {
-		if (c != ' ' && (t = this.tiles.props[c])) {
+		if (c != ' ' && (t = world.tiles.props[c])) {
 			if (t.name) {
 				tile.prop = this.getImage(t.name);
 			}
 		}
+	}
+
+	if (t && t.exterior) {
+		tile.exterior = this.getMapTile(map, x, y, t.exterior);
 	}
 
 	return(tile);
@@ -312,29 +285,57 @@ IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
 			break;
 
 		default:
-			if (this.tiles.ground[c]) {
+			if (world.tiles.ground[c]) {
 				map.ground[y]	= replace(map.ground[y],	x, c);
-			} else if (this.tiles.props[c]) {
+			} else if (world.tiles.props[c]) {
 				map.props[y]	= replace(map.props[y],		x, c);
 			}
 			break;
 	}
 };
 
-IdleEngine.prototype.renderTile = function renderTile(tile, iso, ctx)
+/*
+	Render a tile at the specified iso coordinates.
+
+	If an elevation is specified then only render the portion of the tile that
+	is relevant for that elevation.
+*/
+IdleEngine.prototype.renderTile = function renderTile(tile, iso, ctx, elevation)
 {
 	/* Ground level is at an elevation of 5 */
 	var ground	= 5;
+	var inside	= false;
 	var img;
 
 	if (isNaN(tile.elevation)) {
 		tile.elevation = ground;
 	}
 
+	if (!isNaN(elevation)) {
+		if (tile.exterior) {
+			if (tile.exterior.elevation == elevation) {
+				if (this.inside) {
+					inside = true;
+				}
+
+				tile = tile.exterior;
+			}
+		}
+
+		if (tile.elevation != elevation) {
+			/* We don't have anything to render here */
+			return;
+		}
+	}
+
 	/* Calculate the elevation offset for this pass */
 	var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
 
 	if (tile.side) {
+		if (inside) {
+			ctx.globalAlpha = 0.5;
+		}
+
 		if (typeof tile.side === "string") {
 			img = this.getImage(tile.side);
 		} else {
@@ -344,6 +345,13 @@ IdleEngine.prototype.renderTile = function renderTile(tile, iso, ctx)
 		ctx.drawImage(img,
 			iso[0] + this.offset[0] - (img.width / 2),
 			iso[1] + this.offset[1] - (this.tileSize[1] / 2) - eloff);
+
+		ctx.globalAlpha = 1.0;
+	}
+
+	if (inside) {
+		/* Don't draw the roof when inside */
+		return;
 	}
 
 	if (tile.img) {
@@ -364,6 +372,7 @@ IdleEngine.prototype.renderTile = function renderTile(tile, iso, ctx)
 
 IdleEngine.prototype.renderMap = function renderMap(map, characters, ctx)
 {
+	// TODO	Allow changing the base ground level on a per screen basis
 	/* Ground level is at an elevation of 5 */
 	var ground	= 5;
 
@@ -393,6 +402,20 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters, ctx)
 	var tile;
 
 	/*
+		If Idle is standing on a tile that has an interior and an exterior then
+		render all exterior tiles transparently.
+	*/
+	this.inside = false;
+	if (characters.length >= 1) {
+		var m = characters[0].getMapCoords();
+
+		if ((tile = this.getMapTile(map, m[0], m[1])) && tile.exterior) {
+			this.inside = true;
+		}
+	}
+
+
+	/*
 		Render each row from lowest elevation to highest elevation.
 
 		For each elevation render the ground (and walls) first, then a second
@@ -411,6 +434,10 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters, ctx)
 				continue;
 			}
 
+			if (tile.exterior && !isNaN(tile.exterior.elevation)) {
+				elmax = Math.max(elmax, tile.exterior.elevation);
+			}
+
 			elmax = Math.max(elmax, tile.elevation);
 			elmin = Math.min(elmin, tile.elevation);
 		}
@@ -418,14 +445,14 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters, ctx)
 		for (var el = elmin; el <= elmax; el++) {
 			/* Render the ground and walls */
 			for (var x = 0, y = row; x <= row; y--, x++) {
-				if (!(tile = this.getMapTile(map, x, y)) || tile.elevation != el) {
+				if (!(tile = this.getMapTile(map, x, y))) {
 					continue;
 				}
 
 				/* Calculate isometric coords */
 				var iso = this.mapToIso(x, y);
 
-				this.renderTile(tile, iso, ctx);
+				this.renderTile(tile, iso, ctx, el);
 			}
 
 			/* Render characters and props */
@@ -601,10 +628,10 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 
 		this.offset = [ 0, 0 ];
 		for (var t = 0, type; type = types[t]; t++) {
-			var keys	= Object.keys(this.tiles[type]);
+			var keys	= Object.keys(world.tiles[type]);
 
 			for (var k = 0, key; key = keys[k]; k++) {
-				var tile = this.tiles[type][key];
+				var tile = world.tiles[type][key];
 				var img;
 
 				ctx.fillText(key, x - 5, canvas.height - 65);
@@ -761,17 +788,21 @@ IdleEngine.prototype.start = function start()
 		var keys	= Object.keys(o);
 
 		for (var i = 0, k; k = keys[i]; i++) {
-			if (typeof o[k] === "string") {
-				if (-1 == images.indexOf(o[k])) {
-					images.push(o[k]);
-				}
-			} else {
-				listimages(o[k]);
+			switch (typeof o[k]) {
+				case "string":
+					if (-1 == images.indexOf(o[k])) {
+						images.push(o[k]);
+					}
+					break;
+
+				case "object":
+					listimages(o[k]);
+					break;
 			}
 		}
 	};
 
-	listimages(this.tiles);
+	listimages(world.tiles);
 	console.log('Preloading images:', images);
 
 	this.loadImages(images, function() {
@@ -809,5 +840,11 @@ IdleEngine.prototype.resize = function resize()
 		this.scale = 1;
 	}
 };
+
+window.addEventListener('load', function()
+{
+	var c		= document.getElementById('game');
+	var engine	= new IdleEngine(c);
+}, false);
 
 

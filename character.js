@@ -304,6 +304,10 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 		}
 
 		if (!this.engine.debug) {
+			if (toT.solid) {
+				return(null);
+			}
+
 			if (fromT) {
 				if (toT.elevation - fromT.elevation > 1) {
 					/* He can't climb something that steep */

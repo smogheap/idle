@@ -15,19 +15,55 @@
 */
 
 var world = {
+	"tiles": {
+		ground: {
+			" ": { name: "grass",	side: "elevation-soil"			},
+			"_": { name: "grass",	side: "elevation-soil-fossil1"	},
+			"#": { name: "rock",	side: "elevation-rock"			},
+			"%": { name: "rock",	side: "elevation-rock-fossil2"	},
+			"o": { name: "puddle",	side: "elevation-soil"			},
+			"O": { name: "hole",	side: "elevation-soil"			},
+
+			"w": { name: "rock",	side: "elevation-soil", solid: true,
+					exterior: { name: "grass",	side: "elevation-soil", height: 4 } },
+
+			"c": { name: "rock",	side: "elevation-soil",
+					exterior: { name: "grass",	height: 4 } }
+		},
+
+		props: {
+			"-": { name: "fence-ne"									},
+			"|": { name: "fence-nw"									}
+		},
+
+		// TODO	Make each character class provide a list of images?
+		characters: {
+			"idle": {
+				n:	"idle-stand-north",
+				ne:	"idle-stand-northeast",
+				e:	"idle-stand-east",
+				se:	"idle-stand-southeast",
+				s:	"idle-stand-south",
+				sw:	"idle-stand-southwest",
+				w:	"idle-stand-west",
+				nw:	"idle-stand-northwest"
+			}
+		}
+	},
+
 	"-1,0": {
 		/* A map of the tiles on the ground */
 		ground: [
 			"           ",
-			"     #     ",
-			"    ###    ",
-			"   #####   ",
-			"     #     ",
-			"     #     ",
+			" wwwwwwwww ",
+			" wcccccccw ",
+			" wcccccccw ",
+			" wcccccccw ",
+			" wcccccccw ",
+			" wcccccccw ",
+			" wwwwcwwww ",
 			"           ",
-			"     #     ",
-			" ##  #     ",
-			"     #     ",
+			"           ",
 			"           "
 		],
 

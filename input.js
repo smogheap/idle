@@ -13,12 +13,6 @@
 	OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 	ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-window.addEventListener('load', function()
-{
-	var c		= document.getElementById('game');
-	var engine	= new IdleEngine(c);
-}, false);
-
 window.addEventListener('resize', function()
 {
 	var c = document.getElementById('game');
@@ -38,20 +32,9 @@ window.addEventListener('keydown', function(event)
 	*/
 
 	switch (event.keyCode) {
-		case 65:	// a, h or left
-		case 72:
 		case 37:	name = 'left';	break;
-
-		case 87:	// w, k or up
-		case 75:
 		case 38:	name = 'up';	break;
-
-		case 68:	// d, l or right
-		case 76:
 		case 39:	name = 'right';	break;
-
-		case 83:	// s, j or down
-		case 74:
 		case 40:	name = 'down';	break;
 
 		/* Tab to toggle debug */
@@ -81,20 +64,9 @@ window.addEventListener('keyup', function(event)
 	c.engine.keys.changed = new Date();
 
 	switch (event.keyCode) {
-		case 65:	// a, h or left
-		case 72:
 		case 37:	c.engine.keys.left	= false; break;
-
-		case 87:	// w, k or up
-		case 75:
 		case 38:	c.engine.keys.up	= false; break;
-
-		case 68:	// d, l or right
-		case 76:
 		case 39:	c.engine.keys.right	= false; break;
-
-		case 83:	// s, j or down
-		case 74:
 		case 40:	c.engine.keys.down	= false; break;
 
 		default:	return;
