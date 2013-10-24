@@ -565,6 +565,40 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 			}
 		}
 
+		/* Render an editor legend */
+		var x			= 5;
+		var types		= [ "ground", "props" ];
+
+		ctx.save();
+
+		for (var t = 0, type; type = types[t]; t++) {
+			var keys	= Object.keys(this.tiles[type]);
+
+			for (var k = 0, key; key = keys[k]; k++) {
+				var tile = this.tiles[type][key];
+				var img;
+
+				ctx.font = '15pt Arial';
+				ctx.fillStyle = 'rgb(255, 255, 255)';
+				ctx.fillText(key, x + 9, canvas.height - 65);
+
+				if (tile.side && (img = this.getImage(tile.side))) {
+					ctx.drawImage(img, x, canvas.height - 36);
+				}
+
+				if (tile.name && (img = this.getImage(tile.name))) {
+					ctx.drawImage(img, x, canvas.height - 60);
+				}
+
+				// TODO	Draw text: key
+				// TODO	Draw this.getImage(tile.side)
+				// TODO Draw this.getImage(tile.name)
+
+				x += 46;
+			}
+		}
+		ctx.restore();
+
 		/* Restore the original render options */
 		this.offset	= offset;
 		this.scale	= scale;
