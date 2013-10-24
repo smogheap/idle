@@ -24,6 +24,10 @@ var world = {
 			"o": { name: "puddle",	side: "elevation-soil"			},
 			"O": { name: "hole",	side: "elevation-soil"			},
 
+			/* Test: A wall that will not go transparent */
+			"W": { name: "grass",	side: "elevation-soil", solid: true, height: 4 },
+
+			/* Test: A wall that will go transparent */
 			"w": { name: "rock",	side: "elevation-soil", solid: true,
 					exterior: { name: "grass",	side: "elevation-soil", height: 4 } },
 
@@ -98,6 +102,52 @@ var world = {
 		]
 	},
 
+	"-1,1": {
+		/* A map of the tiles on the ground */
+		ground: [
+			"           ",
+			" WWWWWWWWW ",
+			" WcccccccW ",
+			" WcccccccW ",
+			" WcccccccW ",
+			" WcccccccW ",
+			" WcccccccW ",
+			" WWWWcWWWW ",
+			"           ",
+			"           ",
+			"           "
+		],
+
+		/* An elevation map, default is 5. Values are in hex */
+		elevation: [
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           "
+		],
+
+		/* A map of any props */
+		props: [
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           "
+		]
+	},
 
 	"0,0": {
 		/* A map of the tiles on the ground */
