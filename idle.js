@@ -543,7 +543,7 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 
 				this.offset = [
 					Math.floor(this.display.canvas.width  / 2),
-					h / 2
+					h
 				];
 
 				/* Adjust the rendering offset */
