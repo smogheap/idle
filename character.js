@@ -76,6 +76,12 @@ IdleCharacter.prototype.draw = function draw(ctx, elevationOffset)
 
 IdleCharacter.prototype.move = function move(facing, direction)
 {
+	var speed = this.speed;
+
+	if (this.engine.debug) {
+		speed *= 3;
+	}
+
 	if (this.destination) {
 		var to = this.engine.mapToIso(this.destination[0], this.destination[1]);
 
@@ -92,10 +98,10 @@ IdleCharacter.prototype.move = function move(facing, direction)
 		];
 
 		/* Limit the movement to the allowed speed */
-		diff[0] = Math.min(diff[0], this.speed);
-		diff[0] = Math.max(diff[0], -this.speed);
-		diff[1] = Math.min(diff[1], this.speed / 2);
-		diff[1] = Math.max(diff[1], -(this.speed / 2));
+		diff[0] = Math.min(diff[0], speed);
+		diff[0] = Math.max(diff[0], -speed);
+		diff[1] = Math.min(diff[1], speed / 2);
+		diff[1] = Math.max(diff[1], -(speed / 2));
 
 		this.x -= diff[0];
 		this.y -= diff[1];
@@ -122,10 +128,10 @@ IdleCharacter.prototype.move = function move(facing, direction)
 
 		/* Move east or west first */
 		if (-1 != direction.indexOf('east')) {
-			dist += this.speed;
+			dist += speed;
 		}
 		if (-1 != direction.indexOf('west')) {
-			dist -= this.speed;
+			dist -= speed;
 		}
 
 		if (dist) {
@@ -144,10 +150,10 @@ IdleCharacter.prototype.move = function move(facing, direction)
 		dist = 0;
 
 		if (-1 != direction.indexOf('north')) {
-			dist -= this.speed / 2;
+			dist -= speed / 2;
 		}
 		if (-1 != direction.indexOf('south')) {
-			dist += this.speed / 2;
+			dist += speed / 2;
 		}
 
 		if (dist) {
