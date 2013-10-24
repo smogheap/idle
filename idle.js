@@ -569,8 +569,8 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 		ctx.font = '5pt Arial';
 		ctx.fillStyle = 'rgb(255, 255, 255)';
 		ctx.fillText('Press tab to toggle editor',	5, 35);
-		ctx.fillText('arrows or wasd to move',		5, 45);
-		ctx.fillText(this.getTimeStr(),			5, 55);
+		ctx.fillText('arrows to move',				5, 45);
+		ctx.fillText(this.getTimeStr(),				5, 55);
 
 		ctx.restore();
 
