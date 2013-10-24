@@ -15,6 +15,54 @@
 */
 
 var world = {
+	"-1,0": {
+		/* A map of the tiles on the ground */
+		ground: [
+			"           ",
+			"     #     ",
+			"    ###    ",
+			"   #####   ",
+			"     #     ",
+			"     #     ",
+			"           ",
+			"     #     ",
+			" ##  #     ",
+			"     #     ",
+			"           "
+		],
+
+		/* An elevation map, default is 5. Values are in hex */
+		elevation: [
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           "
+		],
+
+		/* A map of any props */
+		props: [
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           "
+		]
+	},
+
+
 	"0,0": {
 		/* A map of the tiles on the ground */
 		ground: [
@@ -61,6 +109,54 @@ var world = {
 			"           "
 		]
 	},
+
+	"1,0": {
+		/* A map of the tiles on the ground */
+		ground: [
+			"           ",
+			"     #     ",
+			"    ###    ",
+			"   #####   ",
+			"     #     ",
+			"     #     ",
+			"     #     ",
+			"           ",
+			"           ",
+			"           ",
+			"           "
+		],
+
+		/* An elevation map, default is 5. Values are in hex */
+		elevation: [
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           "
+		],
+
+		/* A map of any props */
+		props: [
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
+			"           "
+		]
+	},
+
 
 	"0,-1": {
 		/* A map of the tiles on the ground */

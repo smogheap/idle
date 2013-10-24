@@ -103,7 +103,27 @@ IdleEngine.prototype.tiles = {
 
 IdleEngine.prototype.getMap = function getMap(screen)
 {
-	return(world[(screen || this.screen).toString()]);
+	var map;
+	var keys	= [ "ground", "elevation", "props" ];
+
+	if ((map = world[(screen || this.screen).toString()])) {
+		return(map);
+	}
+
+	if (this.debug) {
+		map = { };
+
+		for (var c = 0, k; k = keys[c]; c++) {
+			map[k] = [];
+
+			for (var i = 0; i < 11; i++) {
+				map[k].push("           ");
+			}
+		}
+	}
+
+	world[(screen || this.screen).toString()] = map;
+	return(map);
 };
 
 IdleEngine.prototype.getImage = function getImage(name, type)
@@ -171,37 +191,35 @@ IdleEngine.prototype.mapToIso = function mapToIso(x, y)
 	return([ Math.floor(tx), Math.floor(ty) ]);
 };
 
-IdleEngine.prototype.outlineTile = function outlineTile(full, x, y, color)
+IdleEngine.prototype.outlineTile = function outlineTile(full, x, y, color, ctx)
 {
-	this.ctx.save();
+	ctx = ctx || this.ctx;
+
+	ctx.save();
 
 	x += this.offset[0];
 	y += this.offset[1] - 1;
 
 	if (full) {
-		this.ctx.fillStyle		= color || 'rgba(255, 255, 255, 0.5)';
+		ctx.fillStyle		= color || 'rgba(255, 255, 255, 0.5)';
 	} else {
-		this.ctx.strokeStyle	= color || 'rgba(255, 255, 255, 1.0)';
+		ctx.strokeStyle	= color || 'rgba(255, 255, 255, 1.0)';
 	}
-	this.ctx.beginPath();
+	ctx.beginPath();
+
+	ctx.moveTo(x, y);
+	ctx.lineTo(x - (this.tileSize[0] / 2), y - (this.tileSize[1] / 2));
+	ctx.lineTo(x, y - this.tileSize[1]);
+	ctx.lineTo(x + (this.tileSize[0] / 2), y - (this.tileSize[1] / 2));
+	ctx.lineTo(x, y);
 
 	if (full) {
-		this.ctx.moveTo(x, y);
-		this.ctx.lineTo(x - (this.tileSize[0] / 2), y - (this.tileSize[1] / 2));
-		this.ctx.lineTo(x, y - this.tileSize[1]);
+		ctx.fill();
 	} else {
-		this.ctx.moveTo(x, y - this.tileSize[1]);
-	}
-	this.ctx.lineTo(x + (this.tileSize[0] / 2), y - (this.tileSize[1] / 2));
-	this.ctx.lineTo(x, y);
-
-	if (full) {
-		this.ctx.fill();
-	} else {
-		this.ctx.stroke();
+		ctx.stroke();
 	}
 
-	this.ctx.restore();
+	ctx.restore();
 };
 
 /* Return a tile based on the ground, elevation & props maps for this screen */
@@ -303,31 +321,33 @@ IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
 	}
 };
 
-IdleEngine.prototype.renderMap = function renderMap(map, characters)
+IdleEngine.prototype.renderMap = function renderMap(map, characters, ctx)
 {
 	/* Ground level is at an elevation of 5 */
 	var ground	= 5;
 
+	ctx = ctx || this.ctx;
+
 	/* Set some clipping for the game area */
-	this.ctx.save();
-	this.ctx.beginPath();
+	ctx.save();
+	ctx.beginPath();
 
 	var x = this.offset[0];
 	var y = this.offset[1] - this.tileSize[1] / 2;
 	var w = map.ground.length / 2;
 
-	this.ctx.moveTo(x, y - 3 - (this.tileSize[1] * 4));
-	this.ctx.lineTo(x + (w * this.tileSize[0]) + 3, 0);
-	this.ctx.lineTo(x + (w * this.tileSize[0]) + 3,
+	ctx.moveTo(x, y - 3 - (this.tileSize[1] * 4));
+	ctx.lineTo(x + (w * this.tileSize[0]) + 3, 0);
+	ctx.lineTo(x + (w * this.tileSize[0]) + 3,
 					y + (w * this.tileSize[1]) + (this.tileSize[1] * 1));
-	this.ctx.lineTo(x,
+	ctx.lineTo(x,
 					y + (w * 2 * this.tileSize[1]) + 3 + (this.tileSize[1] * 1));
-	this.ctx.lineTo(x - (w * this.tileSize[0]) - 3,
+	ctx.lineTo(x - (w * this.tileSize[0]) - 3,
 					y + (w * this.tileSize[1]) + (this.tileSize[1] * 1));
-	this.ctx.lineTo(x - (w * this.tileSize[0]) - 3, 0);
-	this.ctx.lineTo(x, y - 3 - (this.tileSize[1] * 4));
+	ctx.lineTo(x - (w * this.tileSize[0]) - 3, 0);
+	ctx.lineTo(x, y - 3 - (this.tileSize[1] * 4));
 
-	this.ctx.clip();
+	ctx.clip();
 
 	var tile;
 
@@ -368,18 +388,18 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 				var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
 
 				if (tile.side) {
-					this.ctx.drawImage(tile.side,
+					ctx.drawImage(tile.side,
 						iso[0] + this.offset[0] - (tile.side.width / 2),
 						iso[1] + this.offset[1] - (this.tileSize[1] / 2) - eloff);
 				}
 
-				this.ctx.drawImage(tile.img,
+				ctx.drawImage(tile.img,
 					iso[0] + this.offset[0] - (tile.img.width / 2),
 					iso[1] + this.offset[1] - tile.img.height - eloff);
 
 				if (this.debug) {
 					this.outlineTile(false, iso[0], iso[1] - eloff,
-							'rgba(0, 0, 0, 0.6)');
+							'rgba(0, 0, 0, 0.6)', ctx);
 				}
 			}
 
@@ -402,16 +422,16 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 					if (x == m[0] && y == m[1]) {
 						if (this.debug) {
 							this.outlineTile(true, iso[0], iso[1] - eloff,
-								'rgba(0, 0, 255, 0.3)');
+								'rgba(0, 0, 255, 0.3)', ctx);
 						}
 
-						npc.draw(eloff);
+						npc.draw(ctx, eloff);
 					}
 				}
 
 				/* Render any props for this tile */
 				if (tile.prop) {
-					this.ctx.drawImage(tile.prop,
+					ctx.drawImage(tile.prop,
 						iso[0] + this.offset[0] - (tile.prop.width / 2),
 						iso[1] + this.offset[1] - tile.prop.height - eloff);
 				}
@@ -419,14 +439,7 @@ IdleEngine.prototype.renderMap = function renderMap(map, characters)
 		}
 	}
 
-	this.ctx.restore();
-
-	/*
-		Draw over everything as a rather weak way of changing the time of day.
-		It isn't elegant, but it works reasonably well.
-	*/
-	this.ctx.fillStyle = this.getTimeColor(this.time);
-	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+	ctx.restore();
 };
 
 IdleEngine.prototype.inputLoop = function inputLoop()
@@ -476,35 +489,97 @@ IdleEngine.prototype.inputLoop = function inputLoop()
 
 IdleEngine.prototype.renderLoop = function renderLoop(time)
 {
+	var ctx;
+	var canvas;
 
 	/* Request the next animation frame */
 	requestAnimationFrame(this.renderLoop.bind(this));
-	this.ctx.save();
 
-	this.ctx.fillStyle = 'rgb(0, 0, 0)';
-	this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-	this.renderMap(this.getMap(), this.characters);
-
-	this.ctx.font = '20pt Arial';
-	this.ctx.fillStyle = 'rgb(255, 255, 255)';
-	this.ctx.fillText('idle', 5, 25);
-
-	this.ctx.font = '5pt Arial';
-	this.ctx.fillStyle = 'rgb(255, 255, 255)';
-	this.ctx.fillText('Press tab to toggle editor',	5, 35);
-	this.ctx.fillText('arrows or wasd to move',		5, 45);
-	this.ctx.fillText(this.getTimeStr(),			5, 55);
-
-	this.ctx.restore();
-
-	/* Draw a scaled image to our display */
 	this.display.ctx.clearRect(0, 0,
 			this.display.canvas.width, this.display.canvas.height);
-	this.display.ctx.drawImage(this.canvas,
-		(this.display.canvas.width / 2) - ((this.width * this.scale) / 2),
-		(this.display.canvas.height / 2) - ((this.height * this.scale) / 2),
-		this.width * this.scale, this.height * this.scale);
+
+	if (!this.debug) {
+		/* Normal Mode */
+		ctx		= this.ctx;
+		canvas	= this.canvas;
+
+		ctx.save();
+
+		ctx.fillStyle = 'rgb(0, 0, 0)';
+		ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+		this.renderMap(this.getMap(), this.characters, ctx);
+
+		ctx.font = '20pt Arial';
+		ctx.fillStyle = 'rgb(255, 255, 255)';
+		ctx.fillText('idle', 5, 25);
+
+		ctx.font = '5pt Arial';
+		ctx.fillStyle = 'rgb(255, 255, 255)';
+		ctx.fillText('Press tab to toggle editor',	5, 35);
+		ctx.fillText('arrows or wasd to move',		5, 45);
+		ctx.fillText(this.getTimeStr(),			5, 55);
+
+		ctx.restore();
+
+		/* Draw a scaled image to our display */
+		this.display.ctx.drawImage(this.canvas,
+			Math.floor((this.display.canvas.width  / 2) - ((this.width * this.scale)  / 2)),
+			Math.floor((this.display.canvas.height / 2) - ((this.height * this.scale) / 2)),
+			this.width * this.scale, this.height * this.scale);
+	} else {
+		/* Editor Mode: Render the current screen and all bordering screens */
+		var offset	= this.offset.slice(0);
+		var scale	= this.scale;
+		var w		= this.tileSize[0] * 11;
+		var h		= this.tileSize[1] * 11;
+
+		ctx		= this.display.ctx;
+		canvas	= this.display.canvas;
+
+		for (var x = -1; x <= 1; x++) {
+			for (var y = 1; y >= -1; y--) {
+				var map;
+
+				this.offset = [
+					Math.floor(this.display.canvas.width  / 2),
+					h / 2
+				];
+
+				/* Adjust the rendering offset */
+				this.offset[0] -= (-x - y) * (w / 2);
+				this.offset[1] -= (-x + y) * (h / 2);
+
+				if ((map = this.getMap([ this.screen[0] + x, this.screen[1] + y ]))) {
+					/* Only render the center map with a grid, etc */
+					if (x != 0 || y != 0) {
+						this.debug = false;
+					}
+
+					this.renderMap(map,
+						(x == 0 && y == 0) ? this.characters : [],
+						this.display.ctx);
+
+					this.debug = true;
+				}
+			}
+		}
+
+		/* Restore the original render options */
+		this.offset	= offset;
+		this.scale	= scale;
+	}
+
+	/*
+		Draw over everything as a rather weak way of changing the time of day.
+		It isn't elegant, but it works reasonably well.
+	*/
+	this.display.ctx.save();
+
+	this.display.ctx.fillStyle = this.getTimeColor(this.time);
+	this.display.ctx.fillRect(0, 0, this.display.canvas.width, this.display.canvas.height);
+
+	this.display.ctx.restore();
 };
 
 IdleEngine.prototype.timeColors = [

@@ -59,15 +59,17 @@ IdleCharacter.prototype.getMapCoords = function getMapCoords()
 	return(this.engine.isoToMap(this.x, this.y + (this.bounding[1] / 2)));
 };
 
-IdleCharacter.prototype.draw = function draw(elevationOffset)
+IdleCharacter.prototype.draw = function draw(ctx, elevationOffset)
 {
 	var img	= this.getImage();
 	var x	= this.x - (img.width / 2);
 	var y	= this.y - img.height;
 
+	ctx = ctx || this.engine.ctx;
+
 	this.elevationOffset = elevationOffset;
 
-	this.engine.ctx.drawImage(img,
+	ctx.drawImage(img,
 		x + this.engine.offset[0],
 		y + this.engine.offset[1] - elevationOffset);
 };
@@ -255,18 +257,14 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 			} else if (toM[1] >= map.ground.length) {
 				newscreen[1]--;
 			} else if (toM[0] < 0) {
-				newscreen[0]++;
-			} else if (toM[0] >= map.ground.length) {
 				newscreen[0]--;
+			} else if (toM[0] >= map.ground.length) {
+				newscreen[0]++;
 			}
 
 			console.log('Changing screens: ', this.engine.screen, '->', newscreen);
 			if (!(newmap = this.engine.getMap(newscreen.toString()))) {
-				if (this.engine.debug) {
-					// TODO	Create a new map
-				} else {
-					newscreen = null;
-				}
+				newscreen = null;
 			}
 
 			if (newmap) {
