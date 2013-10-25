@@ -24,13 +24,10 @@ var world = {
 			"o": { name: "puddle",	side: "elevation-soil"			},
 			"O": { name: "hole",	side: "elevation-soil"			},
 
-			/* Test: A wall that will not go transparent */
-			"W": { name: "grass",	side: "elevation-soil", solid: true, height: 4 },
+			/* A simple wall dirt wall */
+			"w": { name: "grass",	side: "elevation-soil", solid: true, height: 4 },
 
-			/* Test: A wall that will go transparent */
-			"w": { name: "rock",	side: "elevation-soil", solid: true,
-					exterior: { name: "grass",	side: "elevation-soil", height: 4 } },
-
+			/* A dirt ceiling */
 			"c": { name: "rock",	side: "elevation-soil",
 					exterior: { name: "grass",	height: 4 } }
 		},
@@ -106,13 +103,13 @@ var world = {
 		/* A map of the tiles on the ground */
 		ground: [
 			"           ",
-			" WWWWWWWWW ",
-			" WcccccccW ",
-			" WcccccccW ",
-			" WcccccccW ",
-			" WcccccccW ",
-			" WcccccccW ",
-			" WWWWcWWWW ",
+			" wwwwwwwww ",
+			" wcccccccw ",
+			" wcccccccw ",
+			" wcccccccw ",
+			" wcccccccw ",
+			" wcccccccw ",
+			" wwwwcwwww ",
 			"           ",
 			"           ",
 			"           "

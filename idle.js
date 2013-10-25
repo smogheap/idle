@@ -36,6 +36,14 @@ function IdleEngine(canvas)
 		ctx:				canvas.getContext('2d')
 	};
 
+	/* Keep an extra canvas for modifying images... */
+	this.work = {
+		canvas:				document.createElement('canvas')
+	};
+	this.work.ctx			= this.work.canvas.getContext('2d');
+	this.work.canvas.setAttribute('width',		48);
+	this.work.canvas.setAttribute('height',		48);
+
 	/*
 		Scale the image based on the size of our display canvas, this will be
 		updated in the resize function.
@@ -295,6 +303,33 @@ IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
 };
 
 /*
+	Darken an image.
+
+	This uses the same work canvas each time, so using it will overwrite
+	whatever image was written to it last.
+*/
+IdleEngine.prototype.darkenImage = function darkenImage(img, darkness)
+{
+	if (darkness == 0) {
+		return(img);
+	}
+
+	this.work.ctx.save();
+
+	this.work.canvas.setAttribute('width',		img.width);
+	this.work.canvas.setAttribute('height',		img.height);
+
+	this.work.ctx.drawImage(img, 0, 0);
+	this.work.ctx.globalCompositeOperation = 'source-atop';
+	this.work.ctx.fillStyle = 'rgba(0, 0, 0, ' + darkness + ')';
+
+	this.work.ctx.fillRect(0, 0,
+		this.work.canvas.width, this.work.canvas.height);
+
+	return(this.work.canvas);
+};
+
+/*
 	Render a tile at the specified iso coordinates.
 
 	If an elevation is specified then only render the portion of the tile that
@@ -332,14 +367,18 @@ IdleEngine.prototype.renderTile = function renderTile(tile, iso, ctx, elevation)
 	var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
 
 	if (tile.side) {
-		if (inside) {
-			ctx.globalAlpha = 0.5;
-		}
-
 		if (typeof tile.side === "string") {
 			img = this.getImage(tile.side);
 		} else {
 			img = tile.side;
+		}
+
+		if (this.inside && !tile.exterior) {
+			/*
+				Tiles that only have an exterior should be drawn darker when
+				Idle is indoors.
+			*/
+			img = this.darkenImage(img, 0.6);
 		}
 
 		ctx.drawImage(img,
@@ -350,6 +389,8 @@ IdleEngine.prototype.renderTile = function renderTile(tile, iso, ctx, elevation)
 	}
 
 	if (inside) {
+		// TODO	It might be nice to fade the roofs in and out using globalAlpha?
+
 		/* Don't draw the roof when inside */
 		return;
 	}
@@ -360,9 +401,23 @@ IdleEngine.prototype.renderTile = function renderTile(tile, iso, ctx, elevation)
 		img = this.getImage(tile.name);
 	}
 
+	if (this.inside && !tile.exterior) {
+		/*
+			Tiles that only have an exterior should be drawn darker when Idle is
+			indoors.
+		*/
+		img = this.darkenImage(img, 0.6);
+	}
+
 	ctx.drawImage(img,
 		iso[0] + this.offset[0] - (img.width / 2),
 		iso[1] + this.offset[1] - img.height - eloff);
+
+	if (this.inside && !tile.exterior) {
+		this.work.ctx.clearRect(0, 0,
+			this.work.canvas.width, this.work.canvas.height);
+		this.work.ctx.restore();
+	}
 
 	if (this.debug) {
 		this.outlineTile(false, iso[0], iso[1] - eloff,
