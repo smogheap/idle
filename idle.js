@@ -93,16 +93,74 @@ IdleEngine.prototype.getMap = function getMap(screen)
 	return(map);
 };
 
-IdleEngine.prototype.getImage = function getImage(name, type)
-{
-	type = type || 'images';
+/*
+	Darken an image.
 
-	if (!this.imgcache[name]) {
-		this.imgcache[name] = new Image();
-		this.imgcache[name].src = type + '/' + name + '.png';
+	This uses the same work canvas each time, so using it will overwrite
+	whatever image was written to it last.
+*/
+IdleEngine.prototype.darkenImage = function darkenImage(img, darkness)
+{
+	if (darkness == 0) {
+		return(img);
 	}
 
-	return(this.imgcache[name]);
+	var canvas	= document.createElement('canvas');
+	var ctx		= canvas.getContext('2d');
+
+	canvas.setAttribute('width',		img.width);
+	canvas.setAttribute('height',		img.height);
+
+	ctx.drawImage(img, 0, 0);
+	ctx.globalCompositeOperation = 'source-atop';
+	ctx.fillStyle = 'rgba(0, 0, 0, ' + darkness + ')';
+
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+	return(canvas);
+};
+
+IdleEngine.prototype.getImage = function getImage(name, darkness)
+{
+	var img;
+
+	if (typeof name != "string" && name.name) {
+		/*
+			It looks like the caller passed in an already loaded image, possibly
+			with a different darkness.
+
+			Luckily we stored the name earlier.
+		*/
+		name = name.name;
+	}
+
+	if (!(img = this.imgcache[name])) {
+		this.imgcache[name] = img = new Image();
+		img.src = 'images/' + name + '.png';
+
+		/* Keep the image name, we may want it later */
+		img.name = name;
+	}
+
+	if (darkness && darkness > 0) {
+		/*
+			Get a darker version of the image. If it already exists then use
+			then use that. Otherwise, create it.
+		*/
+		if (!img.darkened) {
+			img.darkened = {};
+		}
+
+		if (!(tmp = img.darkened[darkness.toString])) {
+			img.darkened[darkness.toString] = tmp = this.darkenImage(img, darkness);
+		}
+
+		if (tmp) {
+			img = tmp;
+		}
+	}
+
+	return(img);
 };
 
 IdleEngine.prototype.loadImages = function loadImages(names, cb)
@@ -328,33 +386,6 @@ console.log(diff);
 };
 
 /*
-	Darken an image.
-
-	This uses the same work canvas each time, so using it will overwrite
-	whatever image was written to it last.
-*/
-IdleEngine.prototype.darkenImage = function darkenImage(img, darkness)
-{
-	if (darkness == 0) {
-		return(img);
-	}
-
-	this.work.ctx.save();
-
-	this.work.canvas.setAttribute('width',		img.width);
-	this.work.canvas.setAttribute('height',		img.height);
-
-	this.work.ctx.drawImage(img, 0, 0);
-	this.work.ctx.globalCompositeOperation = 'source-atop';
-	this.work.ctx.fillStyle = 'rgba(0, 0, 0, ' + darkness + ')';
-
-	this.work.ctx.fillRect(0, 0,
-		this.work.canvas.width, this.work.canvas.height);
-
-	return(this.work.canvas);
-};
-
-/*
 	Render a tile at the specified iso coordinates.
 
 	If an elevation is specified then only render the portion of the tile that
@@ -403,7 +434,7 @@ IdleEngine.prototype.renderTile = function renderTile(tile, iso, ctx, elevation)
 				Tiles that only have an exterior should be drawn darker when
 				Idle is indoors.
 			*/
-			img = this.darkenImage(img, 0.6);
+			img = this.getImage(img, 0.6);
 		}
 
 		ctx.drawImage(img,
@@ -431,7 +462,7 @@ IdleEngine.prototype.renderTile = function renderTile(tile, iso, ctx, elevation)
 			Tiles that only have an exterior should be drawn darker when Idle is
 			indoors.
 		*/
-		img = this.darkenImage(img, 0.6);
+		img = this.getImage(img, 0.6);
 	}
 
 	ctx.drawImage(img,
