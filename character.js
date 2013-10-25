@@ -268,7 +268,6 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 				newscreen[0]++;
 			}
 
-			console.log('Changing screens: ', this.engine.screen, '->', newscreen);
 			if (!(newmap = this.engine.getMap(newscreen.toString()))) {
 				newscreen = null;
 			}
@@ -334,7 +333,7 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 	}
 
 	if (newscreen && this.name == "idle") {
-		this.engine.screen = newscreen;
+		this.engine.setScreen(newscreen);
 
 		/* Move him to the center of the correct tile on the new screen */
 		to = this.engine.mapToIso(toM[0], toM[1]);

@@ -302,6 +302,31 @@ IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
 	}
 };
 
+IdleEngine.prototype.setScreen = function setMapTile(screen)
+{
+	var diff	= [
+		this.screen[0] - screen[0],
+		this.screen[1] - screen[1]
+	];
+
+console.log(diff);
+
+	// TODO	Animate the transition... Ideally we want the new screen to slide in
+	//		one tile at a time...
+	//
+	//		An alternative would be to render the entire new screen and slide it
+	//		in one pixel at a time.
+	//
+	//		This approach might be easier... It will mean that the order they
+	//		are rendered has to be changed depending on if it is above or below
+	//		the old screen.
+	//
+	//		This method could even allow full control of Idle during the
+	//		tranisition. I'm not sure this is a good thing though...
+
+	this.screen = screen;
+};
+
 /*
 	Darken an image.
 
@@ -612,8 +637,7 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 
 		ctx.save();
 
-		ctx.fillStyle = 'rgb(0, 0, 0)';
-		ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+		ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
 		this.renderMap(this.getMap(), this.characters, ctx);
 
@@ -712,6 +736,7 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 	*/
 	this.display.ctx.save();
 
+	this.display.ctx.globalCompositeOperation = 'source-atop';
 	this.display.ctx.fillStyle = this.getTimeColor(this.time);
 	this.display.ctx.fillRect(0, 0, this.display.canvas.width, this.display.canvas.height);
 
