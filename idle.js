@@ -14,11 +14,30 @@
 	ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+// TODO	Get rid of the canvas in index.html, and generate an array of them here
+//		to use for each needed layer, then only update the layers that have
+//		changed...
+//
+//		How fast can a brower handle multiple layers like this?
+//
+//		Since the rendering is done one row at a time this would mean that a
+//		row would only need to be rendered when something changed on that row or
+//		the map changes.
+//
+//		Get rid of the main canvas, and in the renderLoop add code that finds or
+//		creates a canvas when rendering a layer.
+//
+//		The number of layers would get a bit ridiculous when in the editor
+//		though...
+
 function IdleEngine(canvas)
 {
 	canvas.engine			= this;
 
 	this.debug				= false;
+
+	/* Setup keyboard input */
+	this.input				= new IdleInput(this);
 
 	/* Setup our internal canvas */
 	this.width				= 320;
