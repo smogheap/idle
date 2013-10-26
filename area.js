@@ -247,7 +247,7 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 
 	this.center	= [
 		Math.floor((size[0]  * scale) / 2),
-		160
+		50 * scale
 	];
 
 	/*
