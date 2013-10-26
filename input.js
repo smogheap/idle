@@ -14,9 +14,10 @@
 	ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-function IdleInput(engine)
+function IdleInput(engine, character)
 {
-	this.engine = engine;
+	this.engine		= engine;
+	this.character	= character;
 
 	this.mouse = {
 		down:	false,
@@ -39,6 +40,11 @@ function IdleInput(engine)
 		document.body.addEventListener('mouseup',		this.mouseUp.bind(		this));
 		document.body.addEventListener('mousemove',		this.mouseMove.bind(	this));
 	}
+};
+
+IdleInput.prototype.setCharacter = function setCharacter(character)
+{
+	this.character = character;
 };
 
 IdleInput.prototype.resize = function resize(event)
@@ -65,10 +71,10 @@ IdleInput.prototype.keydown = function keydown(event)
 		/* Tab to toggle debug */
 		case 9:
 			if (this.engine.debug) {
-				console.log(JSON.stringify(this.engine.getMap(), null, "\t"));
+				console.log(JSON.stringify(this.engine.area.data, null, "\t"));
 			}
 
-			this.engine.debug = !this.engine.debug;
+			this.engine.setDebug(!this.engine.debug);
 			break;
 
 		default:	return;
@@ -88,7 +94,7 @@ IdleInput.prototype.keyup = function keyup(event)
 
 	switch (event.keyCode) {
 		case 37:	this.engine.keys.left	= false; break;
-		case 38:	this.engine.keys.up	= false; break;
+		case 38:	this.engine.keys.up		= false; break;
 		case 39:	this.engine.keys.right	= false; break;
 		case 40:	this.engine.keys.down	= false; break;
 
@@ -101,28 +107,35 @@ IdleInput.prototype.keyup = function keyup(event)
 IdleInput.prototype.keypress = function keypress(event)
 {
 	var s;
+	var area	= this.engine.area;
 
-	if (this.engine.debug) {
-		try {
-			s = String.fromCharCode(event.which);
-		} catch (e) {
-			return;
-		}
+	if (!this.engine.debug) {
+		return;
+	}
 
-		/* Get the tile the character is standing on */
-		if (s && this.engine.characters.length > 0) {
-			var m = this.engine.characters[0].getMapCoords();
+	try {
+		s = String.fromCharCode(event.which);
+	} catch (e) {
+		return;
+	}
 
-			if (s == ' ' && event.shiftKey) {
-				/* Reset the world when shift+space is pressed */
-				for (y = 0; y < this.engine.getMap().ground.length; y++) {
-					for (x = 0; x < this.engine.getMap().ground[y].length; x++) {
-						this.engine.setMapTile(this.engine.getMap(), x, y, ' ');
-					}
+	/* Get the tile the character is standing on */
+	if (!this.character) {
+		return;
+	}
+
+	if (s) {
+		var m = this.character.getMapCoords();
+
+		if (s == ' ' && event.shiftKey) {
+			/* Reset the world when shift+space is pressed */
+			for (y = 0; y < this.engine.getMap().ground.length; y++) {
+				for (x = 0; x < this.engine.getMap().ground[y].length; x++) {
+					area.setMapTile(null, x, y, ' ');
 				}
-			} else {
-				this.engine.setMapTile(this.engine.getMap(), m[0], m[1], s);
 			}
+		} else {
+			area.setMapTile(null, m[0], m[1], s);
 		}
 	}
 };
@@ -155,24 +168,32 @@ IdleInput.prototype.mouseUpdate = function mouseUpdate()
 	e.keys.down		= false;
 	e.keys.left		= false;
 
+	if (!this.character) {
+		return;
+	}
+
 	/*
-		Determine what the mouse position would be on the internal
-		canvas, not the display canvas.
+		Attempt do determine what the mouse position is relative to the area he
+		or she is being rendered on.
+
+		This works under the assumption that the character that is being
+		controlled is actually on the main area that the engine is displaying.
 	*/
-	var x = this.mouse.x;
-	var y = this.mouse.y;
+	var area	= this.engine.area;
+	var x		= this.mouse.x;
+	var y		= this.mouse.y;
 
-	x -= (e.display.canvas.width / 2) - ((e.width * e.scale) / 2);
-	y -= (e.display.canvas.height / 2) - ((e.height * e.scale) / 2);
+	x -= area.center[0];
+	y -= area.center[1];
 
-	x = x / e.scale;
-	y = y / e.scale;
+	x -= area.left;
+	y -= area.top;
+
 	// console.log(x, y);
 
-	/* Determine the direction the mouse is relative to Idle */
-	var dx = x - (e.characters[0].x + e.offset[0]);
-	var dy = y - (e.characters[0].y + e.offset[1] -
-					e.characters[0].elevationOffset);
+	/* Determine the direction the mouse is relative to the character */
+	var dx = x - (this.character.x * area.scale);
+	var dy = y - ((this.character.y - this.character.elevationOffset) * area.scale);
 
 	if (Math.abs(dx) > Math.abs(dy) * 2 || Math.abs(dy) < 10) {
 		dy = 0;

@@ -13,104 +13,38 @@
 	OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 	ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
-// TODO	Get rid of the canvas in index.html, and generate an array of them here
-//		to use for each needed layer, then only update the layers that have
-//		changed...
-//
-//		How fast can a brower handle multiple layers like this?
-//
-//		Since the rendering is done one row at a time this would mean that a
-//		row would only need to be rendered when something changed on that row or
-//		the map changes.
-//
-//		Get rid of the main canvas, and in the renderLoop add code that finds or
-//		creates a canvas when rendering a layer.
-//
-//		The number of layers would get a bit ridiculous when in the editor
-//		though...
-
-function IdleEngine(canvas)
+function IdleEngine()
 {
-	canvas.engine			= this;
-
 	this.debug				= false;
+
+	this.width				= 320;
+	this.height				= 240;
 
 	/* Setup keyboard input */
 	this.input				= new IdleInput(this);
 
-	/* Setup our internal canvas */
-	this.width				= 320;
-	this.height				= 240;
-
-	this.canvas				= document.createElement('canvas');
-	this.canvas.setAttribute('width',		this.width);
-	this.canvas.setAttribute('height',		this.height);
-
-	this.ctx				= this.canvas.getContext('2d');
-
-	/* Keep track of our display canvas */
-	this.display = {
-		canvas:				canvas,
-		ctx:				canvas.getContext('2d')
-	};
-
-	/* Keep an extra canvas for modifying images... */
-	this.work = {
-		canvas:				document.createElement('canvas')
-	};
-	this.work.ctx			= this.work.canvas.getContext('2d');
-	this.work.canvas.setAttribute('width',		48);
-	this.work.canvas.setAttribute('height',		48);
-
 	/*
-		Scale the image based on the size of our display canvas, this will be
-		updated in the resize function.
+		Details about where to render the play area. These will be updated in
+		this.resize().
 	*/
 	this.scale				= 2;
+	this.center				= [ 0, 0 ];
 
-	/* The screen we start on */
-	this.screen				= [ 0, 0 ];
-
-	this.imgcache			= {};
-
-	this.tileSize			= [ 32, 16 ];
-
-	/* Offset for rendering in the middle of the screen */
-	this.offset				= [ this.width / 2, 55 ];
+	/* The starting area */
+	// TODO	At some point we should determine the starting area from a save
+	this.area				= new IdleArea(this, [ 0, 0 ]);
 
 	this.seed				= WRand.getSeed(NaN);
+	this.imgcache			= {};
+	this.tileSize			= [ 32, 16 ];
 
 	/* Start at noon */
 	this.time				= 0.5;
 
+	this.setDebug(false);
+
 	this.start();
 }
-
-IdleEngine.prototype.getMap = function getMap(screen)
-{
-	var map;
-	var keys	= [ "ground", "elevation", "props" ];
-
-	if ((map = world[(screen || this.screen).toString()])) {
-		return(map);
-	}
-
-	if (this.debug) {
-		map = { };
-
-		for (var c = 0, k; k = keys[c]; c++) {
-			map[k] = [];
-
-			for (var i = 0; i < 11; i++) {
-				map[k].push("           ");
-			}
-		}
-	}
-
-	world[(screen || this.screen).toString()] = map;
-	return(map);
-};
 
 /*
 	Darken an image.
@@ -235,155 +169,11 @@ IdleEngine.prototype.mapToIso = function mapToIso(x, y)
 	return([ Math.floor(tx), Math.floor(ty) ]);
 };
 
-IdleEngine.prototype.outlineTile = function outlineTile(full, x, y, color, ctx)
-{
-	ctx = ctx || this.ctx;
-
-	ctx.save();
-
-	x += this.offset[0];
-	y += this.offset[1] - 1;
-
-	if (full) {
-		ctx.fillStyle		= color || 'rgba(255, 255, 255, 0.5)';
-	} else {
-		ctx.strokeStyle	= color || 'rgba(255, 255, 255, 1.0)';
-	}
-	ctx.beginPath();
-
-	ctx.moveTo(x, y);
-	ctx.lineTo(x - (this.tileSize[0] / 2), y - (this.tileSize[1] / 2));
-	ctx.lineTo(x, y - this.tileSize[1]);
-	ctx.lineTo(x + (this.tileSize[0] / 2), y - (this.tileSize[1] / 2));
-	ctx.lineTo(x, y);
-
-	if (full) {
-		ctx.fill();
-	} else {
-		ctx.stroke();
-	}
-
-	ctx.restore();
-};
-
-/* Return a tile based on the ground, elevation & props maps for this screen */
-IdleEngine.prototype.getMapTile = function getMapTile(map, x, y, tileDefinition)
-{
-	var tile	= {};
-	var t		= null;
-	var line;
-	var c;
-
-	/* Get the ground and side tile from the first map */
-	if ((line = map.ground[y]) && (c = line.charAt(x)) && c.length == 1) {
-		if (!(t = tileDefinition)) {
-			t = world.tiles.ground[c];
-		}
-
-		if (t) {
-			tile.solid = t.solid;
-
-			if (t.name) {
-				tile.img = this.getImage(t.name);
-			}
-
-			if (t.side) {
-				tile.side = this.getImage(t.side);
-			}
-		}
-	}
-
-	if (!tile.img) {
-		/* A tile requires at least a ground tile */
-		return(null);
-	}
-
-	/* Get the elevation */
-	if (tile.side && (line = map.elevation[y]) && (c = line.charAt(x)) && c.length == 1) {
-		tile.elevation = parseInt(c, 16);
-	}
-
-	if (isNaN(tile.elevation)) {
-		/* default to ground level */
-		tile.elevation = 5;
-	}
-
-	if (t && t.height) {
-		tile.elevation += t.height;
-	}
-
-	/* Is there a prop on this tile? */
-	if ((line = map.props[y]) && (c = line.charAt(x)) && c.length == 1) {
-		if (c != ' ' && (t = world.tiles.props[c])) {
-			if (t.name) {
-				tile.prop = this.getImage(t.name);
-			}
-		}
-	}
-
-	if (t && t.exterior) {
-		tile.exterior = this.getMapTile(map, x, y, t.exterior);
-	}
-
-	return(tile);
-};
-
-IdleEngine.prototype.setMapTile = function setMapTile(map, x, y, c)
-{
-	var d = 1;
-
-	if (y < 0 || y >= map.length || x < 0 || x >= map.ground[y].length) {
-		return;
-	}
-
-	var replace = function(old, x, c) {
-		return(old.substr(0, x) + c + old.substr(x + 1));
-	};
-
-	switch (c) {
-		case ' ':
-			/* Reset the tile in all 3 maps */
-			map.ground[y]		= replace(map.ground[y],	x, ' ');
-			map.props[y]		= replace(map.props[y],		x, ' ');
-			map.elevation[y]	= replace(map.elevation[y], x, ' ');
-			break;
-
-		case '-':
-			d = -1;
-			// fallthrough
-
-		case '+': case '=':
-			/* Adjust the elevation */
-			var e = parseInt(map.elevation[y].charAt(x), 16);
-
-			if (isNaN(e)) {
-				e = 5;
-			}
-
-			e += d;
-
-			if (e < 0 || e > 0xf) {
-				return;
-			}
-
-			map.elevation[y]	= replace(map.elevation[y], x, e.toString(16));
-			break;
-
-		default:
-			if (world.tiles.ground[c]) {
-				map.ground[y]	= replace(map.ground[y],	x, c);
-			} else if (world.tiles.props[c]) {
-				map.props[y]	= replace(map.props[y],		x, c);
-			}
-			break;
-	}
-};
-
-IdleEngine.prototype.setScreen = function setMapTile(screen)
+IdleEngine.prototype.setArea = function setArea(id)
 {
 	var diff	= [
-		this.screen[0] - screen[0],
-		this.screen[1] - screen[1]
+		this.area.id[0] - id[0],
+		this.area.id[1] - id[1]
 	];
 
 console.log(diff);
@@ -401,227 +191,13 @@ console.log(diff);
 	//		This method could even allow full control of Idle during the
 	//		tranisition. I'm not sure this is a good thing though...
 
-	this.screen = screen;
-};
-
-/*
-	Render a tile at the specified iso coordinates.
-
-	If an elevation is specified then only render the portion of the tile that
-	is relevant for that elevation.
-*/
-IdleEngine.prototype.renderTile = function renderTile(tile, iso, ctx, elevation)
-{
-	/* Ground level is at an elevation of 5 */
-	var ground	= 5;
-	var inside	= false;
-	var img;
-
-	if (isNaN(tile.elevation)) {
-		tile.elevation = ground;
-	}
-
-	if (!isNaN(elevation)) {
-		if (tile.exterior) {
-			if (tile.exterior.elevation == elevation) {
-				if (this.inside) {
-					inside = true;
-				}
-
-				tile = tile.exterior;
-			}
-		}
-
-		if (tile.elevation != elevation) {
-			/* We don't have anything to render here */
-			return;
-		}
-	}
-
-	/* Calculate the elevation offset for this pass */
-	var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
-
-	if (tile.side) {
-		if (typeof tile.side === "string") {
-			img = this.getImage(tile.side);
-		} else {
-			img = tile.side;
-		}
-
-		if (this.inside && !tile.exterior) {
-			/*
-				Tiles that only have an exterior should be drawn darker when
-				Idle is indoors.
-			*/
-			img = this.getImage(img, 0.6);
-		}
-
-		ctx.drawImage(img,
-			iso[0] + this.offset[0] - (img.width / 2),
-			iso[1] + this.offset[1] - (this.tileSize[1] / 2) - eloff);
-
-		ctx.globalAlpha = 1.0;
-	}
-
-	if (inside) {
-		// TODO	It might be nice to fade the roofs in and out using globalAlpha?
-
-		/* Don't draw the roof when inside */
-		return;
-	}
-
-	if (tile.img) {
-		img = tile.img;
-	} else {
-		img = this.getImage(tile.name);
-	}
-
-	if (this.inside && !tile.exterior) {
-		/*
-			Tiles that only have an exterior should be drawn darker when Idle is
-			indoors.
-		*/
-		img = this.getImage(img, 0.6);
-	}
-
-	ctx.drawImage(img,
-		iso[0] + this.offset[0] - (img.width / 2),
-		iso[1] + this.offset[1] - img.height - eloff);
-
-	if (this.inside && !tile.exterior) {
-		this.work.ctx.clearRect(0, 0,
-			this.work.canvas.width, this.work.canvas.height);
-		this.work.ctx.restore();
-	}
-
-	if (this.debug) {
-		this.outlineTile(false, iso[0], iso[1] - eloff,
-				'rgba(0, 0, 0, 0.6)', ctx);
-	}
-};
-
-IdleEngine.prototype.renderMap = function renderMap(map, characters, ctx)
-{
-	// TODO	Allow changing the base ground level on a per screen basis
-	/* Ground level is at an elevation of 5 */
-	var ground	= 5;
-
-	ctx = ctx || this.ctx;
-
-	/* Set some clipping for the game area */
-	ctx.save();
-	ctx.beginPath();
-
-	var x = this.offset[0];
-	var y = this.offset[1] - this.tileSize[1] / 2;
-	var w = map.ground.length / 2;
-
-	ctx.moveTo(x, y - 3 - (this.tileSize[1] * 4));
-	ctx.lineTo(x + (w * this.tileSize[0]) + 3, 0);
-	ctx.lineTo(x + (w * this.tileSize[0]) + 3,
-					y + (w * this.tileSize[1]) + (this.tileSize[1] * 1));
-	ctx.lineTo(x,
-					y + (w * 2 * this.tileSize[1]) + 3 + (this.tileSize[1] * 1));
-	ctx.lineTo(x - (w * this.tileSize[0]) - 3,
-					y + (w * this.tileSize[1]) + (this.tileSize[1] * 1));
-	ctx.lineTo(x - (w * this.tileSize[0]) - 3, 0);
-	ctx.lineTo(x, y - 3 - (this.tileSize[1] * 4));
-
-	ctx.clip();
-
-	var tile;
+	this.area.setID(id);
 
 	/*
-		If Idle is standing on a tile that has an interior and an exterior then
-		render all exterior tiles transparently.
+		Reset the debug areas, which will force them to reload relative to the
+		ID of this.area.
 	*/
-	this.inside = false;
-	if (characters.length >= 1) {
-		var m = characters[0].getMapCoords();
-
-		if ((tile = this.getMapTile(map, m[0], m[1])) && tile.exterior) {
-			this.inside = true;
-		}
-	}
-
-
-	/*
-		Render each row from lowest elevation to highest elevation.
-
-		For each elevation render the ground (and walls) first, then a second
-		pass for characters and props.
-
-		This ensures that a character or prop will be above the ground, but
-		behind anything that is at a higher elevation.
-	*/
-	for (var row = 0; row < map.ground.length * 4; row++) {
-		var elmax	= 0x0;
-		var elmin	= 0xf;
-
-		/* First pass to determine the highest and lowest points of the row */
-		for (var x = 0, y = row; x <= row; y--, x++) {
-			if (!(tile = this.getMapTile(map, x, y))) {
-				continue;
-			}
-
-			if (tile.exterior && !isNaN(tile.exterior.elevation)) {
-				elmax = Math.max(elmax, tile.exterior.elevation);
-			}
-
-			elmax = Math.max(elmax, tile.elevation);
-			elmin = Math.min(elmin, tile.elevation);
-		}
-
-		for (var el = elmin; el <= elmax; el++) {
-			/* Render the ground and walls */
-			for (var x = 0, y = row; x <= row; y--, x++) {
-				if (!(tile = this.getMapTile(map, x, y))) {
-					continue;
-				}
-
-				/* Calculate isometric coords */
-				var iso = this.mapToIso(x, y);
-
-				this.renderTile(tile, iso, ctx, el);
-			}
-
-			/* Render characters and props */
-			for (var x = 0, y = row; x <= row; y--, x++) {
-				if (!(tile = this.getMapTile(map, x, y)) || tile.elevation != el) {
-					continue;
-				}
-
-				/* Calculate isometric coords */
-				var iso = this.mapToIso(x, y);
-
-				/* Calculate the elevation offset for this pass */
-				var eloff = (tile.elevation - ground) * (this.tileSize[1] / 2);
-
-				/* Are there any characters standing on this tile? */
-				for (var i = 0, npc; npc = characters[i]; i++) {
-					var m = npc.getMapCoords();
-
-					if (x == m[0] && y == m[1]) {
-						if (this.debug) {
-							this.outlineTile(true, iso[0], iso[1] - eloff,
-								'rgba(0, 0, 255, 0.3)', ctx);
-						}
-
-						npc.draw(ctx, eloff);
-					}
-				}
-
-				/* Render any props for this tile */
-				if (tile.prop) {
-					ctx.drawImage(tile.prop,
-						iso[0] + this.offset[0] - (tile.prop.width / 2),
-						iso[1] + this.offset[1] - tile.prop.height - eloff);
-				}
-			}
-		}
-	}
-
-	ctx.restore();
+	this.setDebug(this.debug);
 };
 
 IdleEngine.prototype.inputLoop = function inputLoop()
@@ -637,8 +213,8 @@ IdleEngine.prototype.inputLoop = function inputLoop()
 
 	this.time += 1 / (SecondsPerDay * 30);
 
-	if (this.mouseupdate) {
-		this.mouseupdate();
+	if (this.input) {
+		this.input.mouseUpdate();
 	}
 
 	/* Update the character image based on the direction he is facing */
@@ -669,83 +245,74 @@ IdleEngine.prototype.inputLoop = function inputLoop()
 	}
 };
 
-IdleEngine.prototype.renderLoop = function renderLoop(time)
+IdleEngine.prototype.setDebug = function setDebug(debug)
 {
-	var ctx;
-	var canvas;
+	this.debug = debug;
 
+	/* Reset all debug areas to avoid leaving around stale DOM nodes */
+	if (this.debugAreas) {
+		var keys = Object.keys(this.debugAreas);
+
+		for (var i = 0, k; k = keys[i]; i++) {
+			this.debugAreas[k].reset();
+		}
+	}
+	this.area.reset();
+
+	this.area.debug = debug;
+
+	if (!debug) {
+		delete this.debugAreas;
+
+		this.area.reset();
+		return;
+	}
+
+	this.debugAreas = {};
+};
+
+IdleEngine.prototype.render = function render(time)
+{
 	/* Request the next animation frame */
-	requestAnimationFrame(this.renderLoop.bind(this));
-
-	this.display.ctx.clearRect(0, 0,
-			this.display.canvas.width, this.display.canvas.height);
+	requestAnimationFrame(this.render.bind(this));
 
 	if (!this.debug) {
 		/* Normal Mode */
-		ctx		= this.ctx;
-		canvas	= this.canvas;
+		this.area.render(this.characters, this.center,
+					[ this.width, this.height ], this.scale);
 
-		ctx.save();
-
-		ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-		this.renderMap(this.getMap(), this.characters, ctx);
-
-		ctx.font = '20pt Arial';
-		ctx.fillStyle = 'rgb(255, 255, 255)';
-		ctx.fillText('idle', 5, 25);
-
-		ctx.font = '5pt Arial';
-		ctx.fillStyle = 'rgb(255, 255, 255)';
-		ctx.fillText('Press tab to toggle editor',	5, 35);
-		ctx.fillText('arrows to move',				5, 45);
-		ctx.fillText(this.getTimeStr(),				5, 55);
-
-		ctx.restore();
-
-		/* Draw a scaled image to our display */
-		this.display.ctx.drawImage(this.canvas,
-			Math.floor((this.display.canvas.width  / 2) - ((this.width * this.scale)  / 2)),
-			Math.floor((this.display.canvas.height / 2) - ((this.height * this.scale) / 2)),
-			this.width * this.scale, this.height * this.scale);
+		// TODO	Draw the OSD
 	} else {
-		/* Editor Mode: Render the current screen and all bordering screens */
-		var offset	= this.offset.slice(0);
-		var scale	= this.scale;
-		var w		= this.tileSize[0] * 11;
-		var h		= this.tileSize[1] * 11;
-
-		ctx		= this.display.ctx;
-		canvas	= this.display.canvas;
+		var w		= this.tileSize[0] * this.area.size;
+		var h		= this.tileSize[1] * this.area.size;
 
 		for (var x = -1; x <= 1; x++) {
 			for (var y = 1; y >= -1; y--) {
-				var map;
+				var name	= [ x, y ].toString();
+				var center	= this.center.slice(0);
+				var area;
+				var middle	= (x == 0 && y == 0);
 
-				this.offset = [
-					Math.floor(this.display.canvas.width  / 2),
-					h
-				];
+				/* Adjust the rendering position */
+				center[0] -= (-x - y) * (w / 2);
+				center[1] -= (-x + y) * (h / 2);
 
-				/* Adjust the rendering offset */
-				this.offset[0] -= (-x - y) * (w / 2);
-				this.offset[1] -= (-x + y) * (h / 2);
-
-				if ((map = this.getMap([ this.screen[0] + x, this.screen[1] + y ]))) {
-					/* Only render the center map with a grid, etc */
-					if (x != 0 || y != 0) {
-						this.debug = false;
-					}
-
-					this.renderMap(map,
-						(x == 0 && y == 0) ? this.characters : [],
-						this.display.ctx);
-
-					this.debug = true;
+				if (middle) {
+					/* Only the center area should be marked as debug */
+					area = this.area;
+					area.debug = true;
+				} else if (!(area = this.debugAreas[name])) {
+					area = this.debugAreas[name] = new IdleArea(this,
+								[ this.area.id[0] + x, this.area.id[1] + y ],
+								false);
 				}
+
+				area.render(middle ? this.characters : [], center,
+					[ 400, 400 ], 1);
 			}
 		}
 
+if (false) {
 		/* Render an editor legend */
 		var x			= 15;
 		var types		= [ "ground", "props" ];
@@ -774,12 +341,11 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 		ctx.fillText("+- Adjust Height", x, canvas.height - 15);
 
 		ctx.restore();
-
-		/* Restore the original render options */
-		this.offset	= offset;
-		this.scale	= scale;
+}
 	}
 
+// TODO	Restore this
+if (false) {
 	/*
 		Draw over everything as a rather weak way of changing the time of day.
 		It isn't elegant, but it works reasonably well.
@@ -791,6 +357,7 @@ IdleEngine.prototype.renderLoop = function renderLoop(time)
 	this.display.ctx.fillRect(0, 0, this.display.canvas.width, this.display.canvas.height);
 
 	this.display.ctx.restore();
+}
 };
 
 IdleEngine.prototype.timeColors = [
@@ -904,9 +471,13 @@ IdleEngine.prototype.start = function start()
 	}
 
 	/* Idle is always the first character in the list */
-	this.characters = [
-		new IdleCharacter("idle", iso[0], iso[1] - this.tileSize[1] / 2, this)
-	];
+	var idle = new IdleCharacter("idle", iso[0], iso[1] - this.tileSize[1] / 2, this);
+
+	this.characters = [ idle ];
+
+	/* Tell the input class to control Idle */
+	this.input.setCharacter(idle);
+
 
 	this.keys = {};
 	this.keys.changed = new Date();
@@ -937,21 +508,13 @@ IdleEngine.prototype.start = function start()
 
 	this.loadImages(images, function() {
 		this.resize();
-		this.renderLoop();
+		this.render();
 		this.inputLoop();
 	}.bind(this));
 };
 
 IdleEngine.prototype.resize = function resize()
 {
-	this.display.canvas.width	= window.innerWidth;
-	this.display.canvas.height	= window.innerHeight;
-
-	/* We want to look old school */
-	this.display.ctx.imageSmoothingEnabled			= false;
-	this.display.ctx.mozImageSmoothingEnabled		= false;
-	this.display.ctx.webkitImageSmoothingEnabled	= false;
-
 	/*
 		Determine the best scaling to use to fill the display we have as much as
 		possible while sticking to an even multiple of our internal screen size.
@@ -969,12 +532,16 @@ IdleEngine.prototype.resize = function resize()
 		/* Sanity check */
 		this.scale = 1;
 	}
+
+	this.center = [
+		Math.round(window.innerWidth  / 2),
+		Math.round(window.innerHeight / 2)
+	];
 };
 
 window.addEventListener('load', function()
 {
-	var c		= document.getElementById('game');
-	var engine	= new IdleEngine(c);
+	new IdleEngine();
 }, false);
 
 

@@ -59,19 +59,33 @@ IdleCharacter.prototype.getMapCoords = function getMapCoords()
 	return(this.engine.isoToMap(this.x, this.y + (this.bounding[1] / 2)));
 };
 
-IdleCharacter.prototype.draw = function draw(ctx, elevationOffset)
+IdleCharacter.prototype.render = function render(ctx, scale, elevationOffset)
 {
 	var img	= this.getImage();
 	var x	= this.x - (img.width / 2);
 	var y	= this.y - img.height;
+	var m	= this.getMapCoords().slice(0);
+
+	/*
+		Mark the previoius location as dirty, unless it happens to match the
+		tile the character is still on.
+	*/
+	if (this.lastRenderedAt &&
+		(this.lastRenderedAt[0] != m[0] || this.lastRenderedAt[1] != m[1])
+	) {
+		this.engine.area.dirtyTile(this.lastRenderedAt);
+	}
+	this.lastRenderedAt = m;
 
 	ctx = ctx || this.engine.ctx;
 
 	this.elevationOffset = elevationOffset;
 
 	ctx.drawImage(img,
-		x + this.engine.offset[0],
-		y + this.engine.offset[1] - elevationOffset);
+			scale * x,
+			scale * (y - elevationOffset),
+			scale * img.width,
+			scale * img.height);
 };
 
 IdleCharacter.prototype.move = function move(facing, direction)
@@ -83,7 +97,9 @@ IdleCharacter.prototype.move = function move(facing, direction)
 	}
 
 	if (this.destination) {
-		var to = this.engine.mapToIso(this.destination[0], this.destination[1]);
+		var area	= this.engine.area;
+		var to		= this.engine.mapToIso(this.destination[0], this.destination[1]);
+		var fromM	= this.engine.isoToMap(this.x, (this.y - this.bounding[1] / 2));
 
 		/* Aim towards the center */
 		to[1] -= this.engine.tileSize[1] / 2;
@@ -113,6 +129,9 @@ IdleCharacter.prototype.move = function move(facing, direction)
 		if (1 == this.onTile(this.destination)) {
 			delete this.destination;
 		}
+
+		this.engine.area.dirtyTile(this.lastRenderedAt);
+		this.engine.area.dirtyTile(this.getMapCoords());
 		return;
 	}
 
@@ -139,9 +158,14 @@ IdleCharacter.prototype.move = function move(facing, direction)
 				/* Yup, all good */
 				this.x = to[0];
 				this.y = to[1];
+
+				this.engine.area.dirtyTile(this.lastRenderedAt);
+				this.engine.area.dirtyTile(this.getMapCoords());
 			}
 
 			if (this.destination) {
+				this.engine.area.dirtyTile(this.lastRenderedAt);
+				this.engine.area.dirtyTile(this.getMapCoords());
 				return;
 			}
 		}
@@ -161,6 +185,9 @@ IdleCharacter.prototype.move = function move(facing, direction)
 				/* Yup, all good */
 				this.x = to[0];
 				this.y = to[1];
+
+				this.engine.area.dirtyTile(this.lastRenderedAt);
+				this.engine.area.dirtyTile(this.getMapCoords());
 			}
 		}
 	}
@@ -224,11 +251,10 @@ IdleCharacter.prototype.onTile = function onTile(position)
 */
 IdleCharacter.prototype.walkTo = function walkTo(to)
 {
-	var map			= this.engine.getMap();
-
 	/* Where is the character coming from? */
+	var area		= this.engine.area;
 	var fromM		= this.engine.isoToMap(this.x, (this.y - this.bounding[1] / 2));
-	var fromT		= this.engine.getMapTile(map, fromM[0], fromM[1]);
+	var fromT		= area.getMapTile(fromM[0], fromM[1]);
 	var newscreen	= null;
 	var destination	= [];
 
@@ -248,7 +274,7 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 
 	for (var i = 0, t; t = tolist[i]; i++) {
 		var toM = this.engine.isoToMap(t[0], t[1]);
-		var toT = this.engine.getMapTile(map, toM[0], toM[1]);
+		var toT = area.getMapTile(toM[0], toM[1]);
 
 		/* Only the last check can actually change the screen */
 		newscreen = null;
@@ -256,19 +282,19 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 		if (!toT) {
 			var newmap;
 
-			newscreen = this.engine.screen.slice(0);
+			newscreen = area.id.slice(0);
 
 			if (toM[1] < 0) {
 				newscreen[1]++;
-			} else if (toM[1] >= map.ground.length) {
+			} else if (toM[1] >= area.size) {
 				newscreen[1]--;
 			} else if (toM[0] < 0) {
 				newscreen[0]--;
-			} else if (toM[0] >= map.ground.length) {
+			} else if (toM[0] >= area.size) {
 				newscreen[0]++;
 			}
 
-			if (!(newmap = this.engine.getMap(newscreen.toString()))) {
+			if (!(newmap = area.getMapData(newscreen.toString()))) {
 				newscreen = null;
 			}
 
@@ -283,7 +309,7 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 				}
 				toM[0] %= newmap.ground[toM[1]].length;
 
-				toT = this.engine.getMapTile(newmap, toM[0], toM[1]);
+				toT = area.getMapTile(toM[0], toM[1], newmap);
 			}
 
 			if (!toT) {
@@ -297,7 +323,7 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 		*/
 		if (!newscreen && toT && fromT && toT.elevation != fromT.elevation) {
 			destination.push({
-				map:	toM.slice(0),
+				mapID:	toM.slice(0),
 				tile:	toT
 			});
 		}
@@ -333,7 +359,7 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 	}
 
 	if (newscreen && this.name == "idle") {
-		this.engine.setScreen(newscreen);
+		this.engine.setArea(newscreen);
 
 		/* Move him to the center of the correct tile on the new screen */
 		to = this.engine.mapToIso(toM[0], toM[1]);
@@ -362,7 +388,7 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 		var match = null;
 
 		for (var i = 0, d; d = destination[i]; i++) {
-			if (d.map[0] == fromM[0] || d.map[1] == fromM[1]) {
+			if (d.mapID[0] == fromM[0] || d.mapID[1] == fromM[1]) {
 				/* Not connected at a corner */
 				match = d;
 				break;
@@ -389,7 +415,7 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 			}
 		}
 
-		this.destination = match.map;
+		this.destination = match.mapID;
 
 		this.engine.keys.changed = new Date();
 		return([ this.x, this.y ]);

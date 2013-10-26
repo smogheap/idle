@@ -25,7 +25,8 @@ var world = {
 			"O": { name: "hole",	side: "elevation-soil"			},
 
 			/* A simple wall dirt wall */
-			"w": { name: "grass",	side: "elevation-soil", solid: true, height: 4 },
+			"w": { name: "rock",	side: "elevation-soil", solid: true, height: 2,
+					exterior: { name: "grass", side: "elevation-soil", height: 4 } },
 
 			/* A dirt ceiling */
 			"c": { name: "rock",	side: "elevation-soil",
