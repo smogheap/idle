@@ -52,12 +52,8 @@ function IdleEngine()
 	This uses the same work canvas each time, so using it will overwrite
 	whatever image was written to it last.
 */
-IdleEngine.prototype.darkenImage = function darkenImage(img, darkness)
+IdleEngine.prototype.darkenImage = function darkenImage(img, color)
 {
-	if (darkness == 0) {
-		return(img);
-	}
-
 	var canvas	= document.createElement('canvas');
 	var ctx		= canvas.getContext('2d');
 
@@ -66,14 +62,14 @@ IdleEngine.prototype.darkenImage = function darkenImage(img, darkness)
 
 	ctx.drawImage(img, 0, 0);
 	ctx.globalCompositeOperation = 'source-atop';
-	ctx.fillStyle = 'rgba(0, 0, 0, ' + darkness + ')';
+	ctx.fillStyle = color;
 
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 	return(canvas);
 };
 
-IdleEngine.prototype.getImage = function getImage(name, darkness)
+IdleEngine.prototype.getImage = function getImage(name, overlaycolor)
 {
 	var img;
 
@@ -95,7 +91,7 @@ IdleEngine.prototype.getImage = function getImage(name, darkness)
 		img.name = name;
 	}
 
-	if (darkness && darkness > 0) {
+	if (overlaycolor) {
 		/*
 			Get a darker version of the image. If it already exists then use
 			then use that. Otherwise, create it.
@@ -104,8 +100,8 @@ IdleEngine.prototype.getImage = function getImage(name, darkness)
 			img.darkened = {};
 		}
 
-		if (!(tmp = img.darkened[darkness.toString])) {
-			img.darkened[darkness.toString] = tmp = this.darkenImage(img, darkness);
+		if (!(tmp = img.darkened[overlaycolor])) {
+			img.darkened[overlaycolor] = tmp = this.darkenImage(img, overlaycolor);
 		}
 
 		if (tmp) {
@@ -373,11 +369,23 @@ IdleEngine.prototype.render = function render(time)
 					[ 400, 400 ], 1);
 			}
 		}
-
-
 	}
 
 // TODO	Restore this
+//
+//		The canvas used for this must be rendered on top of all of the others.
+//
+//		Sadly the source-atop concept won't work here so the background will
+//		change. That is a downside to the layered approaach.
+//
+//		This doesn't actually need to be a canvas layer now though. It could be
+//		a simple div. Just change the background color.
+//
+//		Having a div for the weather layer will allow more complex weather to be
+//		drawn though. Although, that may not be practical if we want the weather
+//		to only effect outside....
+//
+//		A simple solution is to only draw the weather when Idle is outside.
 if (false) {
 	/*
 		Draw over everything as a rather weak way of changing the time of day.

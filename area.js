@@ -203,7 +203,7 @@ IdleArea.prototype.renderTile = function renderTile(tile, scale, inside, ctx, el
 				This tile has no interior, so it should be drawn darkened when
 				Idle is indoors.
 			*/
-			img = this.engine.getImage(img, 0.6);
+			img = this.engine.getImage(img, 'rgba(0, 0, 0, 0.8)');
 		}
 
 		ctx.drawImage(img,
@@ -224,7 +224,7 @@ IdleArea.prototype.renderTile = function renderTile(tile, scale, inside, ctx, el
 			This tile has no interior, so it should be drawn darkened when Idle
 			is indoors.
 		*/
-		img = this.engine.getImage(img, 0.6);
+		img = this.engine.getImage(img, 'rgba(0, 0, 0, 0.8)');
 	}
 
 	ctx.drawImage(img,
