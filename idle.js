@@ -203,24 +203,15 @@ IdleEngine.prototype.setArea = function setArea(id)
 		center[0] += (-diff[0] - diff[1]) * (w / 2);
 		center[1] += (-diff[0] + diff[1]) * (h / 2);
 
-		this.oldarea.render([], this.center,
-					[ this.width, this.height ], this.scale);
-
 		this.area.render(this.characters, center,
 				[ this.width, this.height ], this.scale);
+		this.oldarea.render([], this.center,
+				[ this.width, this.height ], this.scale);
 
-		/* Correct the positions on the screen so that they overlap correctly */
-// TODO	Work out why swapping the nodes is not working right...
 		if (center[1] < this.center[1]) {
-console.log('The new area is higher on the screen, so it should be lower in zIndex');
-			document.body.removeChild(this.area.div);
-			document.body.insertBefore(this.area.div, this.oldarea.div);
-		} else {
-console.log('The new area is lower on the screen, so it should be higher in zIndex');
-			document.body.removeChild(this.oldarea.div);
-			document.body.insertBefore(this.oldarea.div, this.area.div);
+			this.oldarea.div.style.zIndex	= 1;
+			this.area.div.style.zIndex		= 2;
 		}
-
 
 		setTimeout(function() {
 			/* Set the correct position for both areas */
