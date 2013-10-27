@@ -399,6 +399,26 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 				We only need about 200 pixels for a flat area.
 			*/
 			row.ctx.translate(this.center[0], this.center[1]);
+
+			/*
+				Clip the bottom of the screen to match the shape of the bottom
+				of an isometric tile. 2 over, 1 up.
+			*/
+			row.ctx.beginPath();
+
+			/* Start from the bottom center */
+			var bottom = this.height - this.center[1];
+
+			row.ctx.moveTo(0, bottom);
+			row.ctx.lineTo(-(this.width / 2), bottom - (this.width / 4));
+			row.ctx.lineTo(-(this.width / 2), -this.center[1]);
+
+			/* and back on the other side */
+			row.ctx.lineTo( (this.width / 2), -this.center[1]);
+			row.ctx.lineTo( (this.width / 2), bottom - (this.width / 4));
+			row.ctx.lineTo(0, bottom);
+
+			row.ctx.clip();
 		}
 
 		/* Move the canvas to the correct spot. This doesn't require a redraw */
