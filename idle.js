@@ -168,27 +168,87 @@ IdleEngine.prototype.mapToIso = function mapToIso(x, y)
 
 IdleEngine.prototype.setArea = function setArea(id)
 {
+	var oldid	= this.area.id;
+
 	var diff	= [
-		this.area.id[0] - id[0],
-		this.area.id[1] - id[1]
+		oldid[0] - id[0],
+		oldid[1] - id[1]
 	];
 
-console.log(diff);
-
-	// TODO	Animate the transition... Ideally we want the new screen to slide in
-	//		one tile at a time...
-	//
-	//		An alternative would be to render the entire new screen and slide it
-	//		in one pixel at a time.
-	//
-	//		This approach might be easier... It will mean that the order they
-	//		are rendered has to be changed depending on if it is above or below
-	//		the old screen.
-	//
-	//		This method could even allow full control of Idle during the
-	//		tranisition. I'm not sure this is a good thing though...
-
+	console.log(diff);
 	this.area.setID(id);
+
+	if (this.oldarea) {
+		clearTimeout(this.oldarea.killcb);
+		this.oldarea.reset();
+		delete this.oldarea;
+	}
+
+	if (!this.debug) {
+		this.oldarea = new IdleArea(this, oldid, false, 1);
+
+		/*
+			Render this.oldarea in the same spot that this.area will end up. The
+			render function will then move both areas until the new one is in
+			the right spot.
+
+			Each only needs to be rendered once at the start. Simply moving them
+			with CSS will be sufficient to complete the transition.
+		*/
+		/* Calculate where the "new" area should appear */
+		var w		= this.tileSize[0] * this.area.size * this.scale;
+		var h		= this.tileSize[1] * this.area.size * this.scale;
+		var center	= this.center.slice(0);
+
+		center[0] += (-diff[0] - diff[1]) * (w / 2);
+		center[1] += (-diff[0] + diff[1]) * (h / 2);
+
+		this.oldarea.render([], this.center,
+					[ this.width, this.height ], this.scale);
+
+		this.area.render(this.characters, center,
+				[ this.width, this.height ], this.scale);
+
+		/* Correct the positions on the screen so that they overlap correctly */
+// TODO	Work out why swapping the nodes is not working right...
+		if (center[1] < this.center[1]) {
+console.log('The new area is higher on the screen, so it should be lower in zIndex');
+			document.body.removeChild(this.area.div);
+			document.body.insertBefore(this.area.div, this.oldarea.div);
+		} else {
+console.log('The new area is lower on the screen, so it should be higher in zIndex');
+			document.body.removeChild(this.oldarea.div);
+			document.body.insertBefore(this.oldarea.div, this.area.div);
+		}
+
+
+		setTimeout(function() {
+			/* Set the correct position for both areas */
+			var center	= this.center.slice(0);
+
+			center[0] -= (-diff[0] - diff[1]) * (w / 2);
+			center[1] -= (-diff[0] + diff[1]) * (h / 2);
+
+			/* Set the styles to move the elements to the correct positions */
+			this.area.div.style.transition		= 'left 1s, top 1s';
+			this.area.move(this.center);
+
+			this.oldarea.div.style.transition	= 'left 1s, top 1s';
+			this.oldarea.move(center);
+
+			this.oldarea.killcb = setTimeout(function() {
+				/* Done, cleanup */
+				if (this.area && this.area.div) {
+					this.area.div.style.transition = null;
+				}
+
+				if (this.oldarea) {
+					this.oldarea.reset();
+					delete this.oldarea;
+				}
+			}.bind(this), 2000);
+		}.bind(this), 1);
+	}
 
 	/*
 		Reset the debug areas, which will force them to reload relative to the
@@ -334,8 +394,14 @@ IdleEngine.prototype.render = function render(time)
 	requestAnimationFrame(this.render.bind(this));
 
 	if (!this.debug) {
-		/* Normal Mode */
-		this.area.render(this.characters, this.center,
+		/*
+			Normal Mode
+
+			If this.oldarea is set then we are in the middle of a transition and
+			should not set the location.
+		*/
+		this.area.render(this.characters,
+					this.oldarea ? null : this.center,
 					[ this.width, this.height ], this.scale);
 
 		// TODO	Draw the OSD

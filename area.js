@@ -239,6 +239,19 @@ IdleArea.prototype.renderTile = function renderTile(tile, scale, inside, ctx, el
 	}
 };
 
+IdleArea.prototype.move = function move(center)
+{
+	if (center) {
+		this.left	= Math.round(center[0] - (this.width  / 2));
+		this.top	= Math.round(center[1] - (this.height / 2));
+	}
+
+	if (this.div) {
+		this.div.style.left	= this.left + 'px';
+		this.div.style.top	= this.top  + 'px';
+	}
+};
+
 /*
 	Render the given area at the specified position scaled to the specified
 	amount.
@@ -271,13 +284,14 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 	this.width	= size[0] * scale;
 	this.height	= size[1] * scale;
 
-	this.left	= Math.round(center[0] - (this.width  / 2));
-	this.top	= Math.round(center[1] - (this.height / 2));
+	this.move(center);
 
 	this.center	= [
 		Math.floor((size[0]  * scale) / 2),
 		50 * scale
 	];
+
+// TODO	Position and scale the div, and make the canvas layers relative to that
 
 	/*
 		In some cases Idle should be treated differently than other characters,
@@ -342,6 +356,12 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 			if (!this.div) {
 				this.div	= document.createElement('div');
 				document.body.appendChild(this.div);
+
+				this.div.style.position	= 'absolute';
+				this.div.style.width	= this.width  + 'px';
+				this.div.style.height	= this.height + 'px';
+
+				this.move(center);
 			}
 
 			/* Create a canvas for this layer */
@@ -352,7 +372,10 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 			this.div.appendChild(row.canvas);
 
 			/* Ensure that we can see through the layer */
-			row.canvas.style.backgroundColor = 'transparent';
+			row.canvas.style.backgroundColor	= 'transparent';
+
+			/* The canvas is positioned relative to it's parent div */
+			row.canvas.style.position			= 'absolute';
 		}
 
 		/*
@@ -407,11 +430,6 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 
 			row.ctx.clip();
 		}
-
-		/* Move the canvas to the correct spot. This doesn't require a redraw */
-		row.canvas.style.position	= 'absolute';
-		row.canvas.style.left		= this.left + 'px';
-		row.canvas.style.top		= this.top  + 'px';
 
 		/* Determine if any rows in this layer are dirty */
 		for (var r = rg; r < rg + this.rowsPerLayer; r++) {
