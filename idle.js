@@ -250,6 +250,11 @@ IdleEngine.prototype.setDebug = function setDebug(debug)
 	this.debug = debug;
 
 	/* Reset all debug areas to avoid leaving around stale DOM nodes */
+	if (this.legend) {
+		document.body.removeChild(this.legend);
+		delete this.legend;
+	}
+
 	if (this.debugAreas) {
 		var keys = Object.keys(this.debugAreas);
 
@@ -265,10 +270,63 @@ IdleEngine.prototype.setDebug = function setDebug(debug)
 		delete this.debugAreas;
 
 		this.area.reset();
+
+
 		return;
 	}
 
 	this.debugAreas = {};
+
+	/* Create a canvas for the legend */
+	this.legend = document.createElement('canvas');
+
+	this.legend.setAttribute('width',  '400px');
+	this.legend.setAttribute('height', '70px');
+
+	this.legend.style.position		= 'absolute';
+	this.legend.style.height		= '70px';
+	this.legend.style.left			= '5px';
+	this.legend.style.bottom		= '3px';
+
+
+	document.body.appendChild(this.legend);
+	var ctx = this.legend.getContext('2d');
+	/*
+		We want to look old school
+
+		These attributes get reset when the canvas size is changed, so
+		they need to be corrected here.
+	*/
+	ctx.imageSmoothingEnabled			= false;
+	ctx.mozImageSmoothingEnabled		= false;
+	ctx.webkitImageSmoothingEnabled		= false;
+
+	/* Render the editor legend */
+	var x			= 15;
+	var types		= [ "ground", "props" ];
+
+	ctx.save();
+
+	ctx.font		= '15pt Arial';
+	ctx.fillStyle	= 'rgb(255, 255, 255)';
+
+	for (var t = 0, type; type = types[t]; t++) {
+		var keys	= Object.keys(world.tiles[type]);
+
+		for (var k = 0, key; key = keys[k]; k++) {
+			var tile = world.tiles[type][key];
+			var img;
+
+			ctx.fillText(key, x - 5, 15);
+
+			tile.iso = [ x, 45 ];
+			this.area.renderTile(tile, 1, false, ctx, NaN);
+
+			x += 46;
+		}
+	}
+
+	ctx.restore();
 };
 
 IdleEngine.prototype.render = function render(time)
@@ -312,36 +370,7 @@ IdleEngine.prototype.render = function render(time)
 			}
 		}
 
-if (false) {
-		/* Render an editor legend */
-		var x			= 15;
-		var types		= [ "ground", "props" ];
 
-		ctx.save();
-
-		ctx.font = '15pt Arial';
-		ctx.fillStyle = 'rgb(255, 255, 255)';
-
-		this.offset = [ 0, 0 ];
-		for (var t = 0, type; type = types[t]; t++) {
-			var keys	= Object.keys(world.tiles[type]);
-
-			for (var k = 0, key; key = keys[k]; k++) {
-				var tile = world.tiles[type][key];
-				var img;
-
-				ctx.fillText(key, x - 5, canvas.height - 65);
-
-				this.renderTile(tile, [ x, canvas.height - 40 ], ctx);
-
-				x += 46;
-			}
-		}
-
-		ctx.fillText("+- Adjust Height", x, canvas.height - 15);
-
-		ctx.restore();
-}
 	}
 
 // TODO	Restore this
