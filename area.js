@@ -291,8 +291,6 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 		50 * scale
 	];
 
-// TODO	Position and scale the div, and make the canvas layers relative to that
-
 	/*
 		In some cases Idle should be treated differently than other characters,
 		so find him (if he is even in this area).
