@@ -110,6 +110,8 @@ IdleArea.prototype.getMapData = function getMapData(id, debug)
 	var data;
 	var keys	= [ "ground", "elevation", "props" ];
 
+	id = id || this.id;
+
 	if ((data = world[id.toString()])) {
 		return(data);
 	}
@@ -126,6 +128,22 @@ IdleArea.prototype.getMapData = function getMapData(id, debug)
 		}
 
 		world[(id || this.id).toString()] = data;
+	}
+
+	return(data);
+};
+
+IdleArea.prototype.clearMapData = function clearMapData(id)
+{
+	id = id || this.id;
+
+	delete world[id.toString()];
+
+	var data = this.getMapData(id, true);
+
+	if (id == this.id) {
+		/* Make sure everything is treated as dirty */
+		this.setID(id);
 	}
 
 	return(data);

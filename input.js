@@ -129,11 +129,7 @@ IdleInput.prototype.keypress = function keypress(event)
 
 		if (s == ' ' && event.shiftKey) {
 			/* Reset the world when shift+space is pressed */
-			for (y = 0; y < this.engine.getMap().ground.length; y++) {
-				for (x = 0; x < this.engine.getMap().ground[y].length; x++) {
-					area.setMapTile(null, x, y, ' ');
-				}
-			}
+			area.clearMapData();
 		} else {
 			area.setMapTile(null, m[0], m[1], s);
 		}
