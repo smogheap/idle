@@ -230,10 +230,10 @@ console.log('The new area is lower on the screen, so it should be higher in zInd
 			center[1] -= (-diff[0] + diff[1]) * (h / 2);
 
 			/* Set the styles to move the elements to the correct positions */
-			this.area.div.style.transition		= 'left 1s, top 1s';
+			this.area.div.style.transition		= 'left 0.5s linear, top 0.5s linear';
 			this.area.move(this.center);
 
-			this.oldarea.div.style.transition	= 'left 1s, top 1s';
+			this.oldarea.div.style.transition	= 'left 0.5s linear, top 0.5s linear';
 			this.oldarea.move(center);
 
 			this.oldarea.killcb = setTimeout(function() {
@@ -246,7 +246,7 @@ console.log('The new area is lower on the screen, so it should be higher in zInd
 					this.oldarea.reset();
 					delete this.oldarea;
 				}
-			}.bind(this), 2000);
+			}.bind(this), 500);
 		}.bind(this), 1);
 	}
 
