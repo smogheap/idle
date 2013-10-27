@@ -360,9 +360,13 @@ IdleEngine.prototype.render = function render(time)
 					area = this.area;
 					area.debug = true;
 				} else if (!(area = this.debugAreas[name])) {
+					/*
+						These areas only need a single layer. They will never
+						have any dirty tiles.
+					*/
 					area = this.debugAreas[name] = new IdleArea(this,
 								[ this.area.id[0] + x, this.area.id[1] + y ],
-								false);
+								false, 1);
 				}
 
 				area.render(middle ? this.characters : [], center,

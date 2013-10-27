@@ -14,16 +14,21 @@
 	ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-function IdleArea(engine, id, debug)
+function IdleArea(engine, id, debug, maxLayers)
 {
 	this.engine			= engine;
 	this.debug			= debug;
 
 	/* All areas are 11x11 */
 	this.size			= 11;
+	this.rowcount		= (this.size * 2) - 1;
 	this.rows			= [];
 
-	this.rowsPerLayer	= 4;
+	if (!isNaN(maxLayers)) {
+		this.rowsPerLayer	= Math.ceil(this.rowcount / maxLayers);
+	} else {
+		this.rowsPerLayer	= 4;
+	}
 
 	this.setID(id);
 };
@@ -317,7 +322,7 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 		r:	row
 		rg:	row group
 	*/
-	for (var rg = 0; rg < this.size * 4; rg += this.rowsPerLayer) {
+	for (var rg = 0; rg < this.rowcount; rg += this.rowsPerLayer) {
 		var dirty	= 0;
 		var row;
 		var ctx;
