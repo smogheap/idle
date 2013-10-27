@@ -41,7 +41,8 @@ IdleArea.prototype.setID = function setID(id)
 		The row tile caches have just been deleted, so everything will be
 		treated as dirty. There is no need to check the dirty list.
 	*/
-	this.dirty	= {};
+	this.dirty		= {};
+	this.dirtyCount	= 1;
 };
 
 /*
@@ -57,8 +58,9 @@ IdleArea.prototype.reset = function reset()
 		delete this.div;
 	}
 
-	this.rows	= [];
-	this.dirty	= {};
+	this.rows		= [];
+	this.dirty		= {};
+	this.dirtyCount	= 1;
 };
 
 /*
@@ -68,7 +70,10 @@ IdleArea.prototype.reset = function reset()
 IdleArea.prototype.dirtyTile = function dirtyTile(pos, veryDirty)
 {
 	var line;
-console.log('dirty:', pos);
+
+	this.dirtyCount++;
+
+// console.log('dirty:', pos);
 
 	if (!(line = this.dirty[pos[0]])) {
 		line = this.dirty[pos[0]] = [];
@@ -238,6 +243,16 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 
 
 	/* Store details about where this area is being rendered */
+	if (this.dirtyCount == 0 &&
+		this.scale  == scale &&
+		this.width  == (size[0] * scale) &&
+		this.height == (size[1] * scale)
+	) {
+		/* Nothing important has changed, so don't bother */
+		return;
+	}
+
+
 	this.scale	= scale;
 	this.width	= size[0] * scale;
 	this.height	= size[1] * scale;
@@ -452,6 +467,10 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 			}
 		}
 	}
+
+	/* Nothing is dirty now */
+	this.dirty = {};
+	this.dirtyCount = 0;
 };
 
 /* Return a tile based on the ground, elevation & props maps for this screen */
