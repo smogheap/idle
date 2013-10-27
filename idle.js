@@ -627,6 +627,10 @@ IdleEngine.prototype.resize = function resize()
 		Math.round(window.innerWidth  / 2),
 		Math.round(window.innerHeight / 2)
 	];
+
+	if (this.area && !this.oldarea) {
+		this.area.move(this.center);
+	}
 };
 
 window.addEventListener('load', function()
