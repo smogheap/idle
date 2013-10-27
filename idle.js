@@ -16,6 +16,7 @@
 function IdleEngine()
 {
 	this.debug				= false;
+	this.frame				= 0;
 
 	this.width				= 320;
 	this.height				= 240;
@@ -327,6 +328,8 @@ IdleEngine.prototype.setDebug = function setDebug(debug)
 
 IdleEngine.prototype.render = function render(time)
 {
+	this.frame++;
+
 	/* Request the next animation frame */
 	requestAnimationFrame(this.render.bind(this));
 
@@ -371,34 +374,23 @@ IdleEngine.prototype.render = function render(time)
 		}
 	}
 
-// TODO	Restore this
-//
-//		The canvas used for this must be rendered on top of all of the others.
-//
-//		Sadly the source-atop concept won't work here so the background will
-//		change. That is a downside to the layered approaach.
-//
-//		This doesn't actually need to be a canvas layer now though. It could be
-//		a simple div. Just change the background color.
-//
-//		Having a div for the weather layer will allow more complex weather to be
-//		drawn though. Although, that may not be practical if we want the weather
-//		to only effect outside....
-//
-//		A simple solution is to only draw the weather when Idle is outside.
-if (false) {
-	/*
-		Draw over everything as a rather weak way of changing the time of day.
-		It isn't elegant, but it works reasonably well.
-	*/
-	this.display.ctx.save();
+	/* Display the weather */
+	if (!this.weather) {
+		this.weather = document.createElement('div');
 
-	this.display.ctx.globalCompositeOperation = 'source-atop';
-	this.display.ctx.fillStyle = this.getTimeColor(this.time);
-	this.display.ctx.fillRect(0, 0, this.display.canvas.width, this.display.canvas.height);
+		document.body.appendChild(this.weather);
+		this.weather.style.zIndex		= 99;
+		this.weather.style.position		= 'absolute';
+		this.weather.style.top			= '0px';
+		this.weather.style.right		= '0px';
+		this.weather.style.bottom		= '0px';
+		this.weather.style.left			= '0px';
+	}
 
-	this.display.ctx.restore();
-}
+	if (this.frame % 5 == 0) {
+		/* No reason to do this every frame */
+		this.weather.style.backgroundColor	= this.getTimeColor(this.time);
+	}
 };
 
 IdleEngine.prototype.timeColors = [
