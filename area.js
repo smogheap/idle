@@ -239,19 +239,6 @@ IdleArea.prototype.renderTile = function renderTile(tile, scale, inside, ctx, el
 	}
 };
 
-// TODO	We maybe able to save on memory if we set the size of each canvas layer
-//		to be just large enough to render it's contents. This isn't that hard to
-//		do but for now any extra complication will make this harder, so wait.
-
-// TODO	There currently isn't a mask at the bottom of the screen. Do we want
-//		to restore it? It could be added to each canvas when the canvas is
-//		first created, although this may be promblematic if we optimize the
-//		size of each canvas.
-
-// TODO	Allow specifying a number of rows per layer. Depending on the device it
-//		may make more sense to have far fewer layers. Even with only a few this
-//		method of rendering is going to be cleaner.
-
 /*
 	Render the given area at the specified position scaled to the specified
 	amount.
