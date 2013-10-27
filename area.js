@@ -16,16 +16,17 @@
 
 function IdleArea(engine, id, debug)
 {
-	this.engine		= engine;
-	this.debug		= debug;
+	this.engine			= engine;
+	this.debug			= debug;
 
-	this.rows		= [];
+	/* All areas are 11x11 */
+	this.size			= 11;
+	this.rows			= [];
+
+	this.rowsPerLayer	= 4;
 
 	this.setID(id);
 };
-
-/* All areas are 11x11 */
-IdleArea.prototype.size = 11;
 
 IdleArea.prototype.setID = function setID(id)
 {
@@ -224,6 +225,10 @@ IdleArea.prototype.renderTile = function renderTile(tile, scale, inside, ctx, el
 //		first created, although this may be promblematic if we optimize the
 //		size of each canvas.
 
+// TODO	Allow specifying a number of rows per layer. Depending on the device it
+//		may make more sense to have far fewer layers. Even with only a few this
+//		method of rendering is going to be cleaner.
+
 /*
 	Render the given area at the specified position scaled to the specified
 	amount.
@@ -251,7 +256,6 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 		/* Nothing important has changed, so don't bother */
 		return;
 	}
-
 
 	this.scale	= scale;
 	this.width	= size[0] * scale;
@@ -289,24 +293,39 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 	}
 
 	/*
-		Create (or reuse) a canvas for each row.
+		Create or reuse a canvas for each layer, which consists of
+		this.rowsPerLayer rows.
 
-		The size of the canvas depends on the elevations to be rendered on it.
+		r:	row
+		rg:	row group
 	*/
-	for (var r = 0; r < this.size * 4; r++) {
+	for (var rg = 0; rg < this.size * 4; rg += this.rowsPerLayer) {
 		var dirty	= 0;
 		var row;
+		var ctx;
 
-		if (!(row = this.rows[r])) {
-			dirty = 1;
+		for (var r = rg; r < (rg + this.rowsPerLayer); r++) {
+			if (!(row = this.rows[r])) {
+				dirty = 1;
 
-			row = {
-				min:	0xf,
-				max:	0x0
-			};
-			this.rows[r] = row;
+				row = {
+					min:	0xf,
+					max:	0x0
+				};
+				this.rows[r] = row;
+			}
+
+			/*
+				If Idle transitioned from inside to outside then everything will
+				need to be rendered fresh.
+			*/
+			if (row.inside != inside) {
+				dirty = 1;
+			}
+			row.inside = inside;
 		}
 
+		row = this.rows[rg];
 		if (!row.canvas) {
 			dirty = 1;
 
@@ -327,20 +346,11 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 		}
 
 		/*
-			If Idle transitioned from inside to outside then everything will
-			need to be rendered fresh.
-		*/
-		if (row.inside != inside) {
-			dirty = 1;
-		}
-		row.inside = inside;
-
-		/*
 			Scale the canvas correctly. We will require a redraw if the scale
 			has changed.
 		*/
-		if (row.canvas.width  != (this.width) ||
-			row.canvas.height != (this.height)
+		if (row.canvas.width  != this.width ||
+			row.canvas.height != this.height
 		) {
 			dirty = 1;
 
@@ -368,40 +378,47 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 			row.ctx.translate(this.center[0], this.center[1]);
 		}
 
-		/*
-			Move the canvas to the correct spot. This doesn't require a redraw.
-		*/
+		/* Move the canvas to the correct spot. This doesn't require a redraw */
 		row.canvas.style.position	= 'absolute';
 		row.canvas.style.left		= this.left + 'px';
 		row.canvas.style.top		= this.top  + 'px';
 
-		/* Determine if the row is dirty */
-		for (var i = 0, x = 0, y = r; x <= r; y--, x++) {
-			dirty = Math.max(dirty, this.cleanTile([ x, y ]));
-		}
-
-		if (!row.tiles || dirty > 1) {
-			dirty = 1;
-
-			row.tiles = [];
-
-			for (var x = 0, y = r; x <= r; y--, x++) {
-				if (!(tile = this.getMapTile(x, y))) {
-					continue;
-				}
-
-				tile.x = x;
-				tile.y = y;
-
-				tile.iso = this.engine.mapToIso(x, y);
-
-				row.tiles.push(tile);
+		/* Determine if any rows in this layer are dirty */
+		for (var r = rg; r < rg + this.rowsPerLayer; r++) {
+			for (var i = 0, x = 0, y = r; x <= r; y--, x++) {
+				dirty = Math.max(dirty, this.cleanTile([ x, y ]));
 			}
 		}
 
-		if (dirty > 0) {
-			row.ctx.clearRect(-this.center[0], -this.center[1],
-						row.canvas.width, row.canvas.height);
+		if (!dirty && row.tiles) {
+			/* No need to render this row */
+			continue;
+		}
+
+		ctx = row.ctx;
+		ctx.clearRect(-this.center[0], -this.center[1],
+					row.canvas.width, row.canvas.height);
+
+		for (var r = rg; r < rg + this.rowsPerLayer; r++) {
+			row = this.rows[r];
+
+			if (!row.tiles || dirty > 1) {
+				/* Load the tiles for this row */
+				row.tiles = [];
+
+				for (var x = 0, y = r; x <= r; y--, x++) {
+					if (!(tile = this.getMapTile(x, y))) {
+						continue;
+					}
+
+					tile.x = x;
+					tile.y = y;
+
+					tile.iso = this.engine.mapToIso(x, y);
+
+					row.tiles.push(tile);
+				}
+			}
 
 			/* Recalculate the lowest and highest elevation for the row */
 			for (var i = 0, x = 0, y = r; x <= r; y--, x++) {
@@ -428,7 +445,7 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 					}
 					i++;
 
-					this.renderTile(tile, scale, inside, row.ctx, el);
+					this.renderTile(tile, scale, inside, ctx, el);
 				}
 
 				/* Render characters and props */
@@ -448,16 +465,16 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 						if (x == m[0] && y == m[1]) {
 							if (this.debug) {
 								this.outlineTile(true, tile.iso[0], tile.iso[1] - eloff,
-									'rgba(0, 0, 255, 0.3)', row.ctx);
+									'rgba(0, 0, 255, 0.3)', ctx);
 							}
 
-							npc.render(row.ctx, scale, eloff);
+							npc.render(ctx, scale, eloff);
 						}
 					}
 
 					/* Render any props for this tile */
 					if (tile.prop) {
-						row.ctx.drawImage(tile.prop,
+						ctx.drawImage(tile.prop,
 							scale * (tile.iso[0] - (tile.prop.width / 2)),
 							scale * (tile.iso[1] - tile.prop.height - eloff),
 							scale * tile.prop.width,
