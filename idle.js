@@ -328,7 +328,7 @@ IdleEngine.prototype.setDebug = function setDebug(debug)
 	/* Create a canvas for the legend */
 	this.legend = document.createElement('canvas');
 
-	this.legend.setAttribute('width',  '400px');
+	this.legend.setAttribute('width',  '4000px');
 	this.legend.setAttribute('height', '70px');
 
 	this.legend.style.position		= 'absolute';

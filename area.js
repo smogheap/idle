@@ -172,14 +172,13 @@ IdleArea.prototype.renderTile = function renderTile(tile, scale, inside, ctx, el
 		tile.elevation = ground;
 	}
 
-	if (inside && !tile.exterior) {
+	if (inside && !tile.interior) {
 		dark = true;
 	}
 
 	if (!isNaN(elevation)) {
-		if (!inside && tile.exterior && elevation == tile.exterior.elevation) {
-			/* There is an interior & exterior tile, render the exterior now */
-			tile		= tile.exterior;
+		if (inside && tile.interior) {
+			tile = tile.interior;
 		}
 
 		if (elevation != tile.elevation) {
@@ -213,25 +212,27 @@ IdleArea.prototype.renderTile = function renderTile(tile, scale, inside, ctx, el
 			scale * img.height);
 	}
 
-	if (tile.img) {
-		img = tile.img;
-	} else {
-		img = this.engine.getImage(tile.name);
-	}
+	if (tile.ground) {
+		if (typeof tile.ground === "string") {
+			img = this.engine.getImage(tile.ground);
+		} else {
+			img = tile.ground;
+		}
 
-	if (dark) {
-		/*
-			This tile has no interior, so it should be drawn darkened when Idle
-			is indoors.
-		*/
-		img = this.engine.getImage(img, 'rgba(0, 0, 0, 0.8)');
-	}
+		if (dark) {
+			/*
+				This tile has no interior, so it should be drawn darkened when Idle
+				is indoors.
+			*/
+			img = this.engine.getImage(img, 'rgba(0, 0, 0, 0.8)');
+		}
 
-	ctx.drawImage(img,
-		scale * (iso[0] - (img.width / 2)),
-		scale * (iso[1] - img.height - eloff),
-		scale * img.width,
-		scale * img.height);
+		ctx.drawImage(img,
+			scale * (iso[0] - (img.width / 2)),
+			scale * (iso[1] - img.height - eloff),
+			scale * img.width,
+			scale * img.height);
+	}
 
 	if (this.debug) {
 		this.outlineTile(false, iso[0], iso[1] - eloff,
@@ -309,7 +310,7 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 	if (idle) {
 		var m = idle.getMapCoords();
 
-		if ((tile = this.getMapTile(m[0], m[1])) && tile.exterior) {
+		if ((tile = this.getMapTile(m[0], m[1])) && tile.interior) {
 			inside = true;
 		}
 	}
@@ -473,9 +474,9 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 				}
 				i++;
 
-				if (tile.exterior) {
-					row.max = Math.max(row.max, tile.exterior.elevation);
-					row.min = Math.min(row.min, tile.exterior.elevation);
+				if (tile.interior) {
+					row.max = Math.max(row.max, tile.interior.elevation);
+					row.min = Math.min(row.min, tile.interior.elevation);
 				}
 
 				row.max = Math.max(row.max, tile.elevation);
@@ -536,10 +537,37 @@ IdleArea.prototype.render = function render(characters, center, size, scale)
 	this.dirtyCount = 0;
 };
 
-/* Return a tile based on the ground, elevation & props maps for this screen */
-IdleArea.prototype.getMapTile = function IdleArea(x, y, data, tileDefinition)
+/* Take a tile definition and return the parsed data for that tile */
+IdleArea.prototype.getTile = function getTile(name)
 {
+	var t;
 	var tile	= {};
+
+	if ((t = world.tiles.ground[name])) {
+		if (t.solid) {
+			tile.solid = true;
+		}
+
+		if (t.ground) {
+			tile.ground = this.engine.getImage(t.ground);
+		}
+
+		if (t.side) {
+			tile.side = this.engine.getImage(t.side);
+		}
+
+		if (!isNaN(t.height)) {
+			tile.height = t.height;
+		}
+	}
+
+	return(tile);
+};
+
+/* Return a tile based on the ground, elevation & props maps for this screen */
+IdleArea.prototype.getMapTile = function IdleArea(x, y, data, interior)
+{
+	var tile	= null;
 	var t		= null;
 	var line;
 	var c;
@@ -548,32 +576,34 @@ IdleArea.prototype.getMapTile = function IdleArea(x, y, data, tileDefinition)
 		return(null);
 	}
 
-	/* Get the ground and side tile from the first map */
-	if (!(t = tileDefinition)) {
-		if ((line = data.ground[y]) && (c = line.charAt(x)) && c.length == 1) {
-			t = world.tiles.ground[c];
+	if (interior) {
+		data = data.interior;
+
+		if (!data) {
+			return(null);
 		}
 	}
 
-	if (t) {
-		tile.solid = t.solid;
-
-		if (t.name) {
-			tile.img = this.engine.getImage(t.name);
+	/* Get the ground and it's side tile */
+	if (data.ground && (line = data.ground[y]) &&
+		(c = line.charAt(x)) && c.length == 1
+	) {
+		if (interior && c == ' ') {
+			/* This tile does not have an interior */
+			return(null);
 		}
 
-		if (t.side) {
-			tile.side = this.engine.getImage(t.side);
-		}
+		tile = this.getTile(c);
 	}
-
-	if (!tile.img) {
+	if (!tile || !tile.ground) {
 		/* A tile requires at least a ground tile */
 		return(null);
 	}
 
 	/* Get the elevation */
-	if (tile.side && (line = data.elevation[y]) && (c = line.charAt(x)) && c.length == 1) {
+	if (tile.side && data.elevation && (line = data.elevation[y]) &&
+		(c = line.charAt(x)) && c.length == 1
+	) {
 		tile.elevation = parseInt(c, 16);
 	}
 
@@ -582,21 +612,24 @@ IdleArea.prototype.getMapTile = function IdleArea(x, y, data, tileDefinition)
 		tile.elevation = 5;
 	}
 
-	if (t && t.height) {
-		tile.elevation += t.height;
+	if (!isNaN(tile.height)) {
+		tile.elevation += tile.height;
+		delete tile.height;
 	}
 
 	/* Is there a prop on this tile? */
-	if ((line = data.props[y]) && (c = line.charAt(x)) && c.length == 1) {
+	if (data.props && (line = data.props[y]) &&
+		(c = line.charAt(x)) && c.length == 1
+	) {
 		if (c != ' ' && (t = world.tiles.props[c])) {
-			if (t.name) {
-				tile.prop = this.engine.getImage(t.name);
+			if (t.prop) {
+				tile.prop = this.engine.getImage(t.prop);
 			}
 		}
 	}
 
-	if (t && t.exterior) {
-		tile.exterior = this.getMapTile(x, y, data, t.exterior);
+	if (!interior) {
+		tile.interior = this.getMapTile(x, y, data, true);
 	}
 
 	return(tile);
@@ -620,7 +653,7 @@ IdleArea.prototype.setMapTile = function setMapTile(data, x, y, c)
 
 	switch (c) {
 		case ' ':
-			/* Reset the tile in all 3 maps */
+			/* Reset the tile in all maps */
 			data.ground[y]		= replace(data.ground[y],	x, ' ');
 			data.props[y]		= replace(data.props[y],		x, ' ');
 			data.elevation[y]	= replace(data.elevation[y], x, ' ');
@@ -648,8 +681,9 @@ IdleArea.prototype.setMapTile = function setMapTile(data, x, y, c)
 			break;
 
 		default:
+// TODO	Add support for switching to interior mode...
 			if (world.tiles.ground[c]) {
-				data.ground[y]	= replace(data.ground[y],	x, c);
+				data.ground[y]= replace(data.ground[y],	x, c);
 			} else if (world.tiles.props[c]) {
 				data.props[y]	= replace(data.props[y],		x, c);
 			}

@@ -17,25 +17,30 @@
 var world = {
 	"tiles": {
 		ground: {
-			" ": { name: "grass",	side: "elevation-soil"			},
-			"_": { name: "grass",	side: "elevation-soil-fossil1"	},
-			"#": { name: "rock",	side: "elevation-rock"			},
-			"%": { name: "rock",	side: "elevation-rock-fossil2"	},
-			"o": { name: "puddle",	side: "elevation-soil"			},
-			"O": { name: "hole",	side: "elevation-soil"			},
+			/* The default exterior tile is space */
+			" ": { ground: "grass",			side: "elevation-soil"			},
 
-			/* A simple wall dirt wall */
-			"w": { name: "rock",	side: "elevation-soil", solid: true, height: 2,
-					exterior: { name: "grass", side: "elevation-soil", height: 4 } },
+			"q": { ground: "grass",			side: "elevation-soil"			},
+			"Q": { ground: "grass",			side: "elevation-soil-fossil1"	},
+			"w": { ground: "rock",			side: "elevation-rock"			},
+			"W": { ground: "rock",			side: "elevation-rock-fossil2"	},
 
-			/* A dirt ceiling */
-			"c": { name: "rock",	side: "elevation-soil",
-					exterior: { name: "grass",	height: 4 } }
+			/* Brick walls */
+			"e": { ground: "tile-cement1",	side: "elevation-brick"			},
+			"E": { ground: "tile-cement1",	side: "elevation-brickedge1"	},
+			"r": { ground: "tile-cement1",	side: "elevation-brickedge2"	},
+			"R": { ground: "tile-cement1",	side: "elevation-brickgrey"		},
+			"t": { ground: "tile-cement1",	side: "elevation-bricklite"		},
+
+
+			"z": { ground: "puddle",		side: "elevation-soil"			},
+			"Z": { ground: "hole",			side: "elevation-soil"			},
+			"x": { ground: "tile-tar1",		side: "elevation-soil"			}
 		},
 
 		props: {
-			"-": { name: "fence-ne"									},
-			"|": { name: "fence-nw"									}
+			"\\": { prop: "prop-fence-left"									},
+			"/": { prop: "prop-fence-right"									}
 		},
 
 		// TODO	Make each character class provide a list of images?
@@ -53,111 +58,17 @@ var world = {
 		}
 	},
 
-	"-1,0": {
-		/* A map of the tiles on the ground */
-		ground: [
-			"           ",
-			" wwwwwwwww ",
-			" wcccccccw ",
-			" wcccccccw ",
-			" wcccccccw ",
-			" wcccccccw ",
-			" wcccccccw ",
-			" wwwwcwwww ",
-			"           ",
-			"           ",
-			"           "
-		],
-
-		/* An elevation map, default is 5. Values are in hex */
-		elevation: [
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           "
-		],
-
-		/* A map of any props */
-		props: [
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           "
-		]
-	},
-
-	"-1,1": {
-		/* A map of the tiles on the ground */
-		ground: [
-			"           ",
-			" wwwwwwwww ",
-			" wcccccccw ",
-			" wcccccccw ",
-			" wcccccccw ",
-			" wcccccccw ",
-			" wcccccccw ",
-			" wwwwcwwww ",
-			"           ",
-			"           ",
-			"           "
-		],
-
-		/* An elevation map, default is 5. Values are in hex */
-		elevation: [
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           "
-		],
-
-		/* A map of any props */
-		props: [
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           "
-		]
-	},
-
 	"0,0": {
-		/* A map of the tiles on the ground */
+		/* A map of the exterior tiles */
 		ground: [
-			"     #     ",
-			"    ###    ",
-			"   #####   ",
-			"  #######  ",
-			"    ###    ",
-			"    ###    ",
-			"    ###    ",
-			"    ###    ",
+			"           ",
+			"  eee      ",
+			"  eee      ",
+			"  eee      ",
+			"           ",
+			"           ",
+			"           ",
+			"           ",
 			"           ",
 			"           ",
 			"           "
@@ -166,9 +77,9 @@ var world = {
 		/* An elevation map, default is 5. Values are in hex */
 		elevation: [
 			"           ",
-			"           ",
-			"           ",
-			"           ",
+			"  999      ",
+			"  9 9      ",
+			"  9 9      ",
 			"           ",
 			"           ",
 			"           ",
@@ -191,146 +102,38 @@ var world = {
 			"           ",
 			"           ",
 			"           "
-		]
-	},
-
-	"1,0": {
-		/* A map of the tiles on the ground */
-		ground: [
-			"           ",
-			"     #     ",
-			"    ###    ",
-			"   #####   ",
-			"     #     ",
-			"     #     ",
-			"     #     ",
-			"           ",
-			"           ",
-			"           ",
-			"           "
 		],
 
-		/* An elevation map, default is 5. Values are in hex */
-		elevation: [
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           "
-		],
+		interior: {
+			ground: [
+				"           ",
+				"  eee      ",
+				"  eee      ",
+				"  eee      ",
+				"           ",
+				"           ",
+				"           ",
+				"           ",
+				"           ",
+				"           ",
+				"           "
+			],
 
-		/* A map of any props */
-		props: [
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           "
-		]
-	},
-
-
-	"0,-1": {
-		/* A map of the tiles on the ground */
-		ground: [
-			"##### #####",
-			"####   ####",
-			"###     ###",
-			"##       ##",
-			"####   ####",
-			"####   ####",
-			"####   ####",
-			"####   ####",
-			"###########",
-			"###########",
-			"###########"
-		],
-
-		/* An elevation map, default is 5. Values are in hex */
-		elevation: [
-			"00000600000",
-			"03336663330",
-			"03366666330",
-			"03666666630",
-			"03336663330",
-			"03336663330",
-			"03336663330",
-			"03336663330",
-			"03333333330",
-			"03333333330",
-			"00000000000"
-		],
-
-		/* A map of any props */
-		props: [
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           ",
-			"           "
-		]
-	},
-
-	"0,1": {
-		ground: [
-			"# ### ##__ ",
-			" ####%%    ",
-			"  # #      ",
-			"  #   O    ",
-			"      oo   ",
-			"           ",
-			"   #       ",
-			"  #        ",
-			"  #  ##  # ",
-			" ## #  ####",
-			"        #  "
-		],
-
-		elevation: [
-			"acbaa 9876 ",
-			" 9ab999    ",
-			"  8 6      ",
-			"  6        ",
-			"           ",
-			"     877   ",
-			"       766 ",
-			"           ",
-			"   0000 0  ",
-			"  4        ",
-			" 434       "
-		],
-
-		props: [
-			"           ",
-			"           ",
-			"           ",
-			"        ---",
-			"       |   ",
-			"       |   ",
-			"       |   ",
-			"        ---",
-			"------     ",
-			"           ",
-			"           "
-		]
+			/* An elevation map, default is 5. Values are in hex */
+			elevation: [
+				"           ",
+				"  666      ",
+				"  6 6      ",
+				"  6 6      ",
+				"           ",
+				"           ",
+				"           ",
+				"           ",
+				"           ",
+				"           ",
+				"           "
+			]
+		}
 	}
 };
 

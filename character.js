@@ -300,14 +300,14 @@ IdleCharacter.prototype.walkTo = function walkTo(to)
 
 			if (newmap) {
 				while (toM[1] < 0) {
-					toM[1] += newmap.ground.length;
+					toM[1] += area.size;
 				}
-				toM[1] %= newmap.ground.length;
+				toM[1] %= area.size;
 
 				while (toM[0] < 0) {
-					toM[0] += newmap.ground[toM[1]].length;
+					toM[0] += newmap.exterior[toM[1]].length;
 				}
-				toM[0] %= newmap.ground[toM[1]].length;
+				toM[0] %= newmap.exterior[toM[1]].length;
 
 				toT = area.getMapTile(toM[0], toM[1], newmap);
 			}
